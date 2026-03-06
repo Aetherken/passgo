@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "League Gothic", sans-serif;
+  --font-serif: "Inter", sans-serif;
+  
+  --color-warm-white: #FFFFFF;
+  --color-near-black: #131718;
+  --color-accent-orange: #FEC29F;
+  --color-pastel-blue: #D1E6F6;
+  --color-pastel-pink: #FFDAE4;
+  --color-pastel-yellow: #FFF6C6;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-serif);
+    color: var(--color-near-black);
+    background-color: var(--color-warm-white);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
