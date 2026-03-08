@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { useAuth } from "../../context/AuthContext";
 
 export default function Auth() {
     const [mode, setMode] = useState('login');
@@ -11,6 +12,7 @@ export default function Auth() {
     const [form, setForm] = useState({ name: '', studentId: '', phone: '', email: '', password: '' });
 
     const navigate = useNavigate();
+    const { setRole } = useAuth();
 
     const handleChange = e =>
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -43,11 +45,12 @@ export default function Auth() {
                 const role = profile.role;
 
 localStorage.setItem("role", role);
+setRole(role);
 
 if (role === "superadmin" || role === "admin") {
-  navigate("/admin");
+  navigate("/admin", { replace: true });
 } else {
-  navigate("/dashboard");
+  navigate("/dashboard", { replace: true });
 }
 
             } else {
