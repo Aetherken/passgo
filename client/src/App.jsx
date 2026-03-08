@@ -13,17 +13,22 @@ import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 
 const ProtectedRoute = ({ children, roles }) => {
+  const { user, role, loading } = useAuth();
 
-  const { role , loading } = useAuth();
+  // wait for supabase auth to initialize
+  if (loading) return null;
 
-  if (loading) {
-    return null;
-  }
-
-  if (!role) {
+  // user not logged in
+  if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
+  // role still not loaded yet
+  if (!role) {
+    return null;
+  }
+
+  // role not allowed
   if (roles && !roles.includes(role)) {
     return <Navigate to="/dashboard" replace />;
   }
