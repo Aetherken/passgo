@@ -9,8 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChange fires for the existing session too (INITIAL_SESSION event)
-    // So we ONLY use this — no separate getSession() call to avoid double-firing
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         const sessionUser = session?.user || null;
@@ -30,7 +28,6 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem("role");
         }
 
-        // Always stop loading after first event
         setLoading(false);
       }
     );
@@ -38,8 +35,15 @@ export const AuthProvider = ({ children }) => {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("role");
+    setUser(null);
+    setRole(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, role, setRole, loading }}>
+    <AuthContext.Provider value={{ user, role, setRole, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );
