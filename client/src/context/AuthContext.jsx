@@ -1,41 +1,37 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/client';
+import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        api.get('/auth/me')
-            .then(res => setUser(res.data.user))
-            .catch(() => setUser(null))
-            .finally(() => setLoading(false));
-    }, []);
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(localStorage.getItem("role"));
 
-    const login = async (email, password) => {
-        const res = await api.post('/auth/login', { email, password });
-        setUser(res.data.user);
-        return res.data.user;
+  useEffect(() => {
+
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data?.session?.user || null);
     };
 
-    const register = async (data) => {
-        const res = await api.post('/auth/register', data);
-        setUser(res.data.user);
-        return res.data.user;
-    };
+    getSession();
 
-    const logout = async () => {
-        await api.post('/auth/logout');
-        setUser(null);
-    };
-
-    return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-            {!loading && children}
-        </AuthContext.Provider>
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
     );
+
+    return () => listener.subscription.unsubscribe();
+
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, role, setRole }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);
