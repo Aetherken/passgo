@@ -14,7 +14,11 @@ import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 const ProtectedRoute = ({ children, roles }) => {
 
-  const { role } = useAuth();
+  const { role , loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
 
   if (!role) {
     return <Navigate to="/auth" replace />;
