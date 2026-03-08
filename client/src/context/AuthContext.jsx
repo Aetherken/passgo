@@ -8,39 +8,30 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const applySession = (session) => {
-    const sessionUser = session?.user || null;
-    setUser(sessionUser);
-
-    if (sessionUser) {
-      // Role comes free from the JWT — no DB query needed
-      const metaRole = sessionUser.user_metadata?.role;
-      if (metaRole) {
-        setRole(metaRole);
-        localStorage.setItem("role", metaRole);
-      } else {
-        // Fallback to cache (for existing sessions before metadata was set)
-        const cached = localStorage.getItem("role");
-        if (cached) setRole(cached);
-      }
-    } else {
-      setRole(null);
-      localStorage.removeItem("role");
-    }
-  };
-
   useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      applySession(data?.session);
-      setLoading(false);
-    };
-
-    init();
-
+    // onAuthStateChange fires for the existing session too (INITIAL_SESSION event)
+    // So we ONLY use this — no separate getSession() call to avoid double-firing
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        applySession(session);
+        const sessionUser = session?.user || null;
+        setUser(sessionUser);
+
+        if (sessionUser) {
+          const metaRole = sessionUser.user_metadata?.role;
+          if (metaRole) {
+            setRole(metaRole);
+            localStorage.setItem("role", metaRole);
+          } else {
+            const cached = localStorage.getItem("role");
+            setRole(cached || null);
+          }
+        } else {
+          setRole(null);
+          localStorage.removeItem("role");
+        }
+
+        // Always stop loading after first event
+        setLoading(false);
       }
     );
 
