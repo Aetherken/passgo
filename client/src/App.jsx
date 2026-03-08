@@ -11,12 +11,9 @@ import Support from "./pages/Student/Support";
 
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 
-// PROTECTED ROUTE
 const ProtectedRoute = ({ children, roles }) => {
 const { user } = useAuth();
-
-const role =
-user?.role || localStorage.getItem("role");
+const role = localStorage.getItem("role");
 
 if (!user) {
 return <Navigate to="/auth" replace />;
@@ -30,11 +27,9 @@ return children;
 };
 
 function App() {
-return ( <AuthProvider> <BrowserRouter>
+return ( <AuthProvider> <BrowserRouter> <Routes>
 
 ```
-    <Routes>
-
       <Route path="/" element={<Landing />} />
 
       <Route path="/auth" element={<Auth />} />
@@ -80,10 +75,8 @@ return ( <AuthProvider> <BrowserRouter>
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
-
   </BrowserRouter>
 </AuthProvider>
-```
 
 );
 }
