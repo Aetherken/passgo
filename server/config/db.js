@@ -1,19 +1,15 @@
-import mysql from 'mysql2';
+import pg from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'passgo',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+const { Pool } = pg;
+
+console.log('Connecting to:', process.env.DATABASE_URL);
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-// Promise wrapper for async/await
-const promisePool = pool.promise();
-
-export default promisePool;
+export default pool;

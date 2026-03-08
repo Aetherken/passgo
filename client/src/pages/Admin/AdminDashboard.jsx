@@ -7,12 +7,13 @@ import {
 } from 'recharts';
 import {
     LayoutDashboard, Bus, BookOpen, Users, FileText, Bell, Settings,
-    LogOut, Plus, Trash2, X, Check, AlertTriangle, Download, Send
+    LogOut, Plus, Trash2, X, AlertTriangle, Download, Send, Pencil, Clock
 } from 'lucide-react';
 
 const NAV_ITEMS = [
     { id: 'stats', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
     { id: 'buses', icon: <Bus size={18} />, label: 'Bus Management' },
+    { id: 'timings', icon: <Clock size={18} />, label: 'Bus Timings' },
     { id: 'bookings', icon: <BookOpen size={18} />, label: 'Bookings' },
     { id: 'students', icon: <Users size={18} />, label: 'Students' },
     { id: 'reports', icon: <FileText size={18} />, label: 'Reports' },
@@ -31,8 +32,20 @@ export default function AdminDashboard() {
     // Buses
     const [buses, setBuses] = useState([]);
     const [showAddBus, setShowAddBus] = useState(false);
-    const [busForm, setBusForm] = useState({ busNumber: '', operatorName: '', capacity: '' });
+    const [busForm, setBusForm] = useState({ busNumber: '', operatorName: '', capacity: '', seatsBooked: '0' });
     const [busFile, setBusFile] = useState(null);
+
+    // Edit Bus
+    const [showEditBus, setShowEditBus] = useState(false);
+    const [editBusId, setEditBusId] = useState(null);
+    const [editBusForm, setEditBusForm] = useState({ busNumber: '', operatorName: '', capacity: '', seatsBooked: '0' });
+
+    // Time Slots
+    const [timeSlots, setTimeSlots] = useState([]);
+    const [showEditSlot, setShowEditSlot] = useState(false);
+    const [editSlotId, setEditSlotId] = useState(null);
+    const [editSlotForm, setEditSlotForm] = useState({ departureTime: '', arrivalTime: '', availableSeats: '' });
+    const [slotFilterCity, setSlotFilterCity] = useState('');
 
     // Students
     const [students, setStudents] = useState([]);
@@ -53,23 +66,66 @@ export default function AdminDashboard() {
         loadStats();
         loadBuses();
         loadStudents();
+        loadTimeSlots();
+        api.get('/admin/fare')
+            .then(r => { setFare(r.data.fare); setNewFare(r.data.fare); })
+            .catch(() => {});
     }, [user]);
 
-    const loadStats = () => api.get('/admin/stats').then(r => setStats(r.data)).catch(() => { });
-    const loadBuses = () => api.get('/admin/buses').then(r => setBuses(r.data)).catch(() => { });
-    const loadStudents = () => api.get('/admin/students').then(r => setStudents(r.data)).catch(() => { });
+    const loadStats = () => api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+    const loadBuses = () => api.get('/admin/buses').then(r => setBuses(r.data)).catch(() => {});
+    const loadStudents = () => api.get('/admin/students').then(r => setStudents(r.data)).catch(() => {});
+    const loadTimeSlots = () => api.get('/admin/timeslots').then(r => setTimeSlots(r.data)).catch(() => {});
 
     const handleAddBus = async () => {
         const fd = new FormData();
         Object.entries(busForm).forEach(([k, v]) => fd.append(k, v));
         if (busFile) fd.append('image', busFile);
         await api.post('/admin/buses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        setShowAddBus(false); setBusForm({ busNumber: '', operatorName: '', capacity: '' }); loadBuses();
+        setShowAddBus(false);
+        setBusForm({ busNumber: '', operatorName: '', capacity: '', seatsBooked: '0' });
+        setBusFile(null);
+        loadBuses();
+    };
+
+    const handleOpenEdit = (bus) => {
+        setEditBusId(bus.id);
+        setEditBusForm({
+            busNumber: bus.bus_number,
+            operatorName: bus.operator_name,
+            capacity: bus.capacity,
+            seatsBooked: bus.seats_booked ?? 0,
+        });
+        setShowEditBus(true);
+    };
+
+    const handleEditBus = async () => {
+        await api.put(`/admin/buses/${editBusId}`, editBusForm);
+        setShowEditBus(false);
+        setEditBusId(null);
+        loadBuses();
     };
 
     const handleDeleteBus = async (id) => {
         if (!confirm('Delete this bus?')) return;
         await api.delete(`/admin/buses/${id}`); loadBuses();
+    };
+
+    const handleOpenEditSlot = (slot) => {
+        setEditSlotId(slot.id);
+        setEditSlotForm({
+            departureTime: slot.departure_time?.slice(0, 5),
+            arrivalTime: slot.arrival_time?.slice(0, 5),
+            availableSeats: slot.available_seats,
+        });
+        setShowEditSlot(true);
+    };
+
+    const handleEditSlot = async () => {
+        await api.put(`/admin/timeslots/${editSlotId}`, editSlotForm);
+        setShowEditSlot(false);
+        setEditSlotId(null);
+        loadTimeSlots();
     };
 
     const handleToggleStudent = async (id, isActive) => {
@@ -107,6 +163,10 @@ export default function AdminDashboard() {
     };
 
     const navItems = NAV_ITEMS.filter(n => !n.superOnly || user?.role === 'superadmin');
+
+    // Unique city names for filter
+    const uniqueCities = [...new Set(timeSlots.map(s => s.destination))].sort();
+    const filteredSlots = timeSlots.filter(s => !slotFilterCity || s.destination === slotFilterCity);
 
     return (
         <div className="min-h-screen flex bg-gray-50">
@@ -200,7 +260,7 @@ export default function AdminDashboard() {
                                 <table className="w-full text-sm">
                                     <thead className="bg-gray-50 border-b border-gray-100">
                                         <tr>
-                                            {['Bus Number', 'Operator', 'Capacity', 'Status', ''].map(h => (
+                                            {['Bus Number', 'Operator', 'Capacity', 'Seats Booked', 'Status', ''].map(h => (
                                                 <th key={h} className="text-left px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
                                             ))}
                                         </tr>
@@ -211,15 +271,21 @@ export default function AdminDashboard() {
                                                 <td className="px-5 py-4 font-semibold">{bus.bus_number}</td>
                                                 <td className="px-5 py-4 text-gray-500">{bus.operator_name}</td>
                                                 <td className="px-5 py-4 text-gray-500">{bus.capacity} seats</td>
+                                                <td className="px-5 py-4 text-gray-500">{bus.seats_booked ?? 0}</td>
                                                 <td className="px-5 py-4">
                                                     <span className={`text-xs font-semibold px-3 py-1 rounded-full ${bus.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'}`}>
                                                         {bus.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <button onClick={() => handleDeleteBus(bus.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex gap-3">
+                                                        <button onClick={() => handleOpenEdit(bus)} className="text-blue-400 hover:text-blue-600 transition-colors">
+                                                            <Pencil size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleDeleteBus(bus.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -237,11 +303,16 @@ export default function AdminDashboard() {
                                             <button onClick={() => setShowAddBus(false)}><X size={20} /></button>
                                         </div>
                                         <div className="space-y-3">
-                                            {[['Bus Number', 'busNumber', 'KL-58-X-0000'], ['Operator', 'operatorName', 'VJEC Transport'], ['Capacity', 'capacity', '50']].map(([label, key, ph]) => (
+                                            {[
+                                                ['Bus Number', 'busNumber', 'KL-58-X-0000', 'text'],
+                                                ['Operator', 'operatorName', 'VJEC Transport', 'text'],
+                                                ['Capacity', 'capacity', '50', 'number'],
+                                                ['Seats Booked', 'seatsBooked', '0', 'number'],
+                                            ].map(([label, key, ph, type]) => (
                                                 <div key={key}>
                                                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">{label}</label>
                                                     <input value={busForm[key]} onChange={e => setBusForm(f => ({ ...f, [key]: e.target.value }))}
-                                                        placeholder={ph} type={key === 'capacity' ? 'number' : 'text'}
+                                                        placeholder={ph} type={type}
                                                         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none" />
                                                 </div>
                                             ))}
@@ -262,10 +333,156 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Edit Bus Modal */}
+                            {showEditBus && (
+                                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                    <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+                                        <div className="flex justify-between items-center mb-5">
+                                            <h2 className="font-display text-2xl">EDIT BUS</h2>
+                                            <button onClick={() => setShowEditBus(false)}><X size={20} /></button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {[
+                                                ['Bus Number', 'busNumber', 'text'],
+                                                ['Operator', 'operatorName', 'text'],
+                                                ['Capacity', 'capacity', 'number'],
+                                                ['Seats Booked', 'seatsBooked', 'number'],
+                                            ].map(([label, key, type]) => (
+                                                <div key={key}>
+                                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">{label}</label>
+                                                    <input value={editBusForm[key]} onChange={e => setEditBusForm(f => ({ ...f, [key]: e.target.value }))}
+                                                        type={type}
+                                                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-3 mt-5">
+                                            <button onClick={() => setShowEditBus(false)}
+                                                className="flex-1 border-2 border-gray-200 py-3 rounded-full font-semibold text-sm">Cancel</button>
+                                            <button onClick={handleEditBus}
+                                                className="flex-1 bg-[#131718] text-white py-3 rounded-full font-semibold text-sm hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
+                                                Save Changes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* ── Section 3: Bookings ── */}
+                    {/* ── Section 3: Bus Timings ── */}
+                    {section === 'timings' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-widest text-[#FEC29F] mb-1">Schedule</p>
+                                    <h1 className="font-display text-4xl text-[#131718]">BUS TIMINGS</h1>
+                                </div>
+                                <select value={slotFilterCity} onChange={e => setSlotFilterCity(e.target.value)}
+                                    className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none bg-white">
+                                    <option value="">All Destinations</option>
+                                    {uniqueCities.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b border-gray-100">
+                                        <tr>
+                                            {['Destination', 'Bus', 'Departure', 'Arrival', 'Seats Available', ''].map(h => (
+                                                <th key={h} className="text-left px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {filteredSlots.map(slot => (
+                                            <tr key={slot.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-5 py-4">
+                                                    <p className="font-semibold">{slot.destination}</p>
+                                                    <p className="text-xs text-gray-400">from {slot.origin?.split(' ').slice(0, 2).join(' ')}...</p>
+                                                </td>
+                                                <td className="px-5 py-4 text-gray-500 font-mono text-xs">{slot.bus_number}</td>
+                                                <td className="px-5 py-4">
+                                                    <span className="bg-[#D1E6F6] text-[#131718] font-semibold px-3 py-1 rounded-full text-xs">
+                                                        {slot.departure_time?.slice(0, 5)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className="bg-[#FFF6C6] text-[#131718] font-semibold px-3 py-1 rounded-full text-xs">
+                                                        {slot.arrival_time?.slice(0, 5)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className={`text-xs font-semibold ${slot.available_seats > 10 ? 'text-green-600' : 'text-orange-500'}`}>
+                                                        {slot.available_seats} seats
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <button onClick={() => handleOpenEditSlot(slot)}
+                                                        className="text-blue-400 hover:text-blue-600 transition-colors">
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {filteredSlots.length === 0 && <p className="text-center text-gray-400 py-10 text-sm">No time slots found.</p>}
+                            </div>
+
+                            {/* Edit Time Slot Modal */}
+                            {showEditSlot && (
+                                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                    <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+                                        <div className="flex justify-between items-center mb-5">
+                                            <h2 className="font-display text-2xl">EDIT TIMING</h2>
+                                            <button onClick={() => setShowEditSlot(false)}><X size={20} /></button>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Departure Time</label>
+                                                <input
+                                                    type="time"
+                                                    value={editSlotForm.departureTime}
+                                                    onChange={e => setEditSlotForm(f => ({ ...f, departureTime: e.target.value }))}
+                                                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Arrival Time</label>
+                                                <input
+                                                    type="time"
+                                                    value={editSlotForm.arrivalTime}
+                                                    onChange={e => setEditSlotForm(f => ({ ...f, arrivalTime: e.target.value }))}
+                                                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Available Seats</label>
+                                                <input
+                                                    type="number"
+                                                    value={editSlotForm.availableSeats}
+                                                    onChange={e => setEditSlotForm(f => ({ ...f, availableSeats: e.target.value }))}
+                                                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 mt-5">
+                                            <button onClick={() => setShowEditSlot(false)}
+                                                className="flex-1 border-2 border-gray-200 py-3 rounded-full font-semibold text-sm">Cancel</button>
+                                            <button onClick={handleEditSlot}
+                                                className="flex-1 bg-[#131718] text-white py-3 rounded-full font-semibold text-sm hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
+                                                Save Changes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Section 4: Bookings ── */}
                     {section === 'bookings' && (
                         <div className="space-y-6">
                             <h1 className="font-display text-4xl text-[#131718]">ALL BOOKINGS</h1>
@@ -275,7 +492,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ── Section 4: Students ── */}
+                    {/* ── Section 5: Students ── */}
                     {section === 'students' && (
                         <div className="space-y-6">
                             <h1 className="font-display text-4xl text-[#131718]">STUDENT MANAGEMENT</h1>
@@ -340,7 +557,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ── Section 5: Reports ── */}
+                    {/* ── Section 6: Reports ── */}
                     {section === 'reports' && (
                         <div className="space-y-6">
                             <h1 className="font-display text-4xl text-[#131718]">REPORTS & EXPORTS</h1>
@@ -363,7 +580,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ── Section 6: Notifications ── */}
+                    {/* ── Section 7: Notifications ── */}
                     {section === 'notifications' && (
                         <div className="space-y-6 max-w-2xl">
                             <h1 className="font-display text-4xl text-[#131718]">SEND NOTIFICATION</h1>
@@ -397,7 +614,6 @@ export default function AdminDashboard() {
                                 </button>
                             </div>
 
-                            {/* Sent Log */}
                             {sentNotifs.length > 0 && (
                                 <div className="space-y-3">
                                     <p className="font-semibold text-sm text-gray-500 uppercase tracking-wider">Sent Log</p>
@@ -415,7 +631,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ── Section 7: System Config (Super Admin) ── */}
+                    {/* ── Section 8: System Config (Super Admin) ── */}
                     {section === 'system' && user?.role === 'superadmin' && (
                         <div className="space-y-8 max-w-2xl">
                             <h1 className="font-display text-4xl text-[#131718]">SYSTEM CONFIG</h1>

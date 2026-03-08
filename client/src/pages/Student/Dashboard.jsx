@@ -24,11 +24,13 @@ export default function Dashboard() {
     const [bookingResult, setBookingResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [fare, setFare] = useState(25);
     const ticketRef = useRef(null);
 
     useEffect(() => {
         api.get('/cities').then(r => setCities(r.data));
         api.get('/routes').then(r => setRoutes(r.data));
+        api.get('/admin/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
     }, []);
 
     useEffect(() => {
@@ -221,7 +223,7 @@ export default function Dashboard() {
                                 <div className="border-t border-white/20 my-3" />
                                 <div className="flex justify-between font-bold text-lg">
                                     <span>Total Fare</span>
-                                    <span className="text-[#FEC29F]">₹25.00</span>
+                                    <span className="text-[#FEC29F]">₹{fare}.00</span>
                                 </div>
                             </div>
                         </div>
@@ -248,11 +250,10 @@ export default function Dashboard() {
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center gap-3 bg-gray-50 rounded-2xl p-6">
-                                    {/* Mock QR */}
                                     <div className="bg-white p-3 rounded-xl shadow">
-                                        <QRCodeSVG value="upi://pay?pa=passgo@upi&pn=PassGo&am=25&tn=BusPass" size={140} />
+                                        <QRCodeSVG value={`upi://pay?pa=passgo@upi&pn=PassGo&am=${fare}&tn=BusPass`} size={140} />
                                     </div>
-                                    <p className="text-xs text-gray-500 text-center">Scan with any UPI app to pay ₹25</p>
+                                    <p className="text-xs text-gray-500 text-center">Scan with any UPI app to pay ₹{fare}</p>
                                     <p className="text-xs font-mono text-gray-400">passgo@upi</p>
                                 </div>
                             )}
@@ -267,7 +268,7 @@ export default function Dashboard() {
                             </button>
                             <button onClick={handleBook} disabled={loading}
                                 className="flex-1 bg-[#FEC29F] text-[#131718] py-4 rounded-full font-bold text-sm hover:bg-[#131718] hover:text-white transition-all disabled:opacity-50">
-                                {loading ? 'Processing...' : 'Confirm & Pay ₹25 →'}
+                                {loading ? 'Processing...' : `Confirm & Pay ₹${fare} →`}
                             </button>
                         </div>
                     </div>
@@ -298,7 +299,7 @@ export default function Dashboard() {
                                 <div className="flex justify-between"><span className="text-gray-400">Route</span><span>{selectedRoute?.destination}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-400">Departure</span><span>{selectedSlot?.departure_time?.slice(0, 5)}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-400">Bus</span><span>{selectedSlot?.bus_number}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Fare</span><span className="text-[#FEC29F] font-bold">₹25 Paid</span></div>
+                                <div className="flex justify-between"><span className="text-gray-400">Fare</span><span className="text-[#FEC29F] font-bold">₹{fare} Paid</span></div>
                             </div>
 
                             <div className="border-t border-white/20 pt-4 flex justify-center">

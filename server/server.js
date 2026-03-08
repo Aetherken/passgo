@@ -29,7 +29,7 @@ app.use(
         cookie: {
             secure: process.env.NODE_ENV === 'production',
             httpOnly: true,
-            maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+            maxAge: 1000 * 60 * 60 * 24 * 7
         }
     })
 );
@@ -46,6 +46,9 @@ import adminRoutes from './routes/adminRoutes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Also mount cities and routes directly so frontend /api/routes and /api/cities work
+app.use('/api', bookingRoutes);
 
 // Health Route
 app.get('/api/health', (req, res) => {

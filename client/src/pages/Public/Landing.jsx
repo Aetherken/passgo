@@ -1,9 +1,16 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowRight, Bus, QrCode, MapPin, ChevronDown } from 'lucide-react';
+import api from '../../api/client';
 
 export default function Landing() {
     const { user } = useAuth();
+    const [fare, setFare] = useState(25);
+
+    useEffect(() => {
+        api.get('/admin/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
+    }, []);
 
     return (
         <div className="min-h-screen bg-white text-[#131718] overflow-x-hidden">
@@ -29,13 +36,12 @@ export default function Landing() {
 
             {/* HERO */}
             <section className="min-h-screen flex flex-col justify-end pb-24 px-6 md:px-12 pt-24 relative">
-                {/* Background tinted card */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#FFF6C6]/40 via-white to-[#D1E6F6]/30 -z-10" />
 
                 {/* Big badge */}
                 <div className="absolute top-32 right-6 md:right-12">
                     <div className="bg-[#FFDAE4] rounded-2xl p-4 max-w-[160px] text-center shadow-sm">
-                        <p className="font-display text-4xl">₹25</p>
+                        <p className="font-display text-4xl">₹{fare}</p>
                         <p className="text-xs font-medium text-gray-600 mt-1">Flat fare anywhere</p>
                     </div>
                 </div>
@@ -65,7 +71,7 @@ export default function Landing() {
 
                 {/* Stat bar */}
                 <div className="mt-16 flex flex-wrap gap-10">
-                    {[['6', 'Cities Covered'], ['12', 'Daily Trips'], ['₹25', 'Flat Fare']].map(([num, label]) => (
+                    {[['6', 'Cities Covered'], ['12', 'Daily Trips'], [`₹${fare}`, 'Flat Fare']].map(([num, label]) => (
                         <div key={label}>
                             <p className="font-display text-5xl text-[#131718]">{num}</p>
                             <p className="text-sm text-gray-500 font-medium mt-1">{label}</p>
@@ -87,7 +93,7 @@ export default function Landing() {
                 <div className="grid md:grid-cols-3 gap-8">
                     {[
                         { num: '01', icon: <Bus size={28} />, title: 'Pick Your Route', desc: 'Choose from 6 city destinations from Vimal Jyothi Engineering College. View bus timings and available seats in real time.', bg: '#FEC29F' },
-                        { num: '02', icon: <QrCode size={28} />, title: 'Book & Pay', desc: 'Select your time slot and pay just ₹25 flat. Choose UPI or card — checkout takes under 30 seconds.', bg: '#D1E6F6' },
+                        { num: '02', icon: <QrCode size={28} />, title: 'Book & Pay', desc: `Select your time slot and pay just ₹${fare} flat. Choose UPI or card — checkout takes under 30 seconds.`, bg: '#D1E6F6' },
                         { num: '03', icon: <MapPin size={28} />, title: 'Show Your Pass', desc: 'Your digital QR ticket is instant. Show it to the driver or download as a PDF. Track your bus live on the map.', bg: '#FFDAE4' },
                     ].map(({ num, icon, title, desc, bg }) => (
                         <div key={num} className="group relative">
