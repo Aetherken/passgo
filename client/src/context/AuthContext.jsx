@@ -3,39 +3,43 @@ import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
-const fetchAndSetRole = async (userObj) => {
-  if (!userObj) {
-    setRole(null);
-    localStorage.removeItem("role");
-    return;
-  }
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Use cache immediately — don't clear it while refetching
-  const cached = localStorage.getItem("role");
-  if (cached) setRole(cached);
-
-  try {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("email", userObj.email)
-      .single();
-
-    if (profile?.role) {
-      setRole(profile.role);
-      localStorage.setItem("role", profile.role);
+  const fetchAndSetRole = async (userObj) => {
+    if (!userObj) {
+      setRole(null);
+      localStorage.removeItem("role");
+      return;
     }
-  } catch (err) {
-    console.error("Role fetch failed:", err.message);
-  }
-};
+
+    const cached = localStorage.getItem("role");
+    if (cached) setRole(cached);
+
+    try {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("email", userObj.email)
+        .single();
+
+      if (profile?.role) {
+        setRole(profile.role);
+        localStorage.setItem("role", profile.role);
+      }
+    } catch (err) {
+      console.error("Role fetch failed:", err.message);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
       const sessionUser = data?.session?.user || null;
       setUser(sessionUser);
-      await fetchAndSetRole(sessionUser); // ← wait for role before loading=false
+      await fetchAndSetRole(sessionUser);
       setLoading(false);
     };
 
