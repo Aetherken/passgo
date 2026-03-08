@@ -40,11 +40,15 @@ export default function Auth() {
 
                 if (roleError) throw roleError;
 
-                if (profile.role === 'superadmin') {
-                    navigate('/admin');
-                } else {
-                    navigate('/dashboard');
-                }
+                const role = profile.role;
+
+localStorage.setItem("role", role);
+
+if (role === "superadmin" || role === "admin") {
+  navigate("/admin");
+} else {
+  navigate("/dashboard");
+}
 
             } else {
 
