@@ -15,25 +15,21 @@ import AdminDashboard from "./pages/Admin/AdminDashboard";
 const ProtectedRoute = ({ children, roles }) => {
   const { user, role, loading } = useAuth();
 
-  // wait for supabase auth to initialize
   if (loading) return null;
-
-  // user not logged in
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // role still not loaded yet
-  if (!role) {
-    return null;
-  }
-
-  // role not allowed
-  if (roles && !roles.includes(role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!role) return null;
+  if (roles && !roles.includes(role)) return <Navigate to="/dashboard" replace />;
 
   return children;
+};
+
+const RoleRedirect = () => {
+  const { user, role, loading } = useAuth();
+
+  if (loading || !role) return null;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (role === "admin" || role === "superadmin") return <Navigate to="/admin" replace />;
+  return <Navigate to="/dashboard" replace />;
 };
 
 
@@ -41,12 +37,13 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-
         <Routes>
 
           <Route path="/" element={<Landing />} />
-
           <Route path="/auth" element={<Auth />} />
+
+          {/* After login, go here and get redirected based on role */}
+          <Route path="/redirect" element={<RoleRedirect />} />
 
           <Route
             path="/dashboard"
@@ -89,7 +86,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
-
       </BrowserRouter>
     </AuthProvider>
   );

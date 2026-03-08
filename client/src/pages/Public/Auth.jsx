@@ -44,14 +44,7 @@ export default function Auth() {
 
                 const role = profile.role;
 
-localStorage.setItem("role", role);
-setRole(role);
-
-if (role === "superadmin" || role === "admin") {
-  navigate("/admin", { replace: true });
-} else {
-  navigate("/dashboard", { replace: true });
-}
+navigate("/redirect", { replace: true });
 
             } else {
 
