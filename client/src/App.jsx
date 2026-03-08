@@ -12,10 +12,9 @@ import Support from "./pages/Student/Support";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 const ProtectedRoute = ({ children, roles }) => {
-const { user } = useAuth();
 const role = localStorage.getItem("role");
 
-if (!user) {
+if (!role) {
 return <Navigate to="/auth" replace />;
 }
 
