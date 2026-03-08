@@ -12,7 +12,7 @@ export default function Auth() {
     const [form, setForm] = useState({ name: '', studentId: '', phone: '', email: '', password: '' });
 
     const navigate = useNavigate();
-    const { setRole } = useAuth();
+
 
     const handleChange = e =>
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -26,27 +26,14 @@ export default function Auth() {
 
             if (mode === 'login') {
 
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { error } = await supabase.auth.signInWithPassword({
                     email: form.email,
                     password: form.password
                 });
 
                 if (error) throw error;
 
-               if (mode === 'login') {
-  const { error } = await supabase.auth.signInWithPassword({
-    email: form.email,
-    password: form.password
-  });
-
-  if (error) throw error;
-
-  navigate("/redirect", { replace: true });
-}
-
-                const role = profile.role;
-
-navigate("/redirect", { replace: true });
+                navigate("/redirect", { replace: true });
 
             } else {
 
