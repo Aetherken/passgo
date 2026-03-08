@@ -72,10 +72,10 @@ export default function AdminDashboard() {
             .catch(() => {});
     }, [user]);
 
-    const loadStats = () => api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
-    const loadBuses = () => api.get('/admin/buses').then(r => setBuses(r.data)).catch(() => {});
-    const loadStudents = () => api.get('/admin/students').then(r => setStudents(r.data)).catch(() => {});
-    const loadTimeSlots = () => api.get('/admin/timeslots').then(r => setTimeSlots(r.data)).catch(() => {});
+    const loadStats = () => api.get(`/admin/stats`).then(r => setStats(r.data || null)).catch(() => {});
+    const loadBuses = () => api.get('/admin/buses').then(r => setBuses(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    const loadStudents = () => api.get('/admin/students').then(r => setStudents(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    const loadTimeSlots = () => api.get('/admin/timeslots').then(r => setTimeSlots(Array.isArray(r.data) ? r.data : [])).catch(() => {});
 
     const handleAddBus = async () => {
         const fd = new FormData();
