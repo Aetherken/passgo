@@ -8,48 +8,39 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAndSetRole = async (userObj) => {
-    if (!userObj) {
+  const applySession = (session) => {
+    const sessionUser = session?.user || null;
+    setUser(sessionUser);
+
+    if (sessionUser) {
+      // Role comes free from the JWT — no DB query needed
+      const metaRole = sessionUser.user_metadata?.role;
+      if (metaRole) {
+        setRole(metaRole);
+        localStorage.setItem("role", metaRole);
+      } else {
+        // Fallback to cache (for existing sessions before metadata was set)
+        const cached = localStorage.getItem("role");
+        if (cached) setRole(cached);
+      }
+    } else {
       setRole(null);
       localStorage.removeItem("role");
-      return;
-    }
-
-    const cached = localStorage.getItem("role");
-    if (cached) setRole(cached);
-
-    try {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("email", userObj.email)
-        .single();
-
-      if (profile?.role) {
-        setRole(profile.role);
-        localStorage.setItem("role", profile.role);
-      }
-    } catch (err) {
-      console.error("Role fetch failed:", err.message);
     }
   };
 
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
-      const sessionUser = data?.session?.user || null;
-      setUser(sessionUser);
-      await fetchAndSetRole(sessionUser);
+      applySession(data?.session);
       setLoading(false);
     };
 
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const sessionUser = session?.user || null;
-        setUser(sessionUser);
-        await fetchAndSetRole(sessionUser);
+      (_event, session) => {
+        applySession(session);
       }
     );
 
