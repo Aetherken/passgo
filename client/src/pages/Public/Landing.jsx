@@ -5,7 +5,7 @@ import { ArrowRight, Bus, QrCode, MapPin, ChevronDown } from 'lucide-react';
 import api from '../../api/client';
 
 export default function Landing() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [fare, setFare] = useState(25);
 
     useEffect(() => {
@@ -21,7 +21,7 @@ export default function Landing() {
                     <a href="#how" className="text-sm font-medium hover:text-[#FEC29F] transition-colors">How It Works</a>
                     <a href="#about" className="text-sm font-medium hover:text-[#FEC29F] transition-colors">About</a>
                     {user ? (
-                        <Link to={user.role === 'student' ? '/dashboard' : '/admin'}
+                        <Link to={role === 'admin' || role === 'superadmin' ? '/admin' : '/dashboard'}
                             className="bg-[#131718] text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
                             My Dashboard →
                         </Link>

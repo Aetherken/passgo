@@ -28,14 +28,14 @@ export default function Dashboard() {
     const ticketRef = useRef(null);
 
     useEffect(() => {
-        api.get('/cities').then(r => setCities(r.data));
-        api.get('/routes').then(r => setRoutes(r.data));
+        api.get('/cities').then(r => setCities(Array.isArray(r.data) ? r.data : [])).catch(() => setCities([]));
+        api.get('/routes').then(r => setRoutes(Array.isArray(r.data) ? r.data : [])).catch(() => setRoutes([]));
         api.get('/admin/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
     }, []);
 
     useEffect(() => {
         if (selectedRoute) {
-            api.get(`/routes/${selectedRoute.id}/slots`).then(r => setSlots(r.data));
+            api.get(`/routes/${selectedRoute.id}/slots`).then(r => setSlots(Array.isArray(r.data) ? r.data : [])).catch(() => setSlots([]));
         }
     }, [selectedRoute]);
 
