@@ -1,38 +1,40 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import mysql from 'mysql2/promise';
+import pg from 'pg';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function runSeed() {
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        multipleStatements: true
-    });
+const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+async function runMigration() {
+    const client = await pool.connect();
 
     try {
         const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
         const seedSql = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf-8');
 
         console.log('Running Schema...');
-        await connection.query(schemaSql);
-        console.log('Schema applied successfully.');
+        await client.query(schemaSql);
+        console.log('✓ Schema applied successfully.');
 
         console.log('Running Seed Data...');
-        await connection.query(seedSql);
-        console.log('Database seeded successfully.');
+        await client.query(seedSql);
+        console.log('✓ Database seeded successfully.');
 
     } catch (error) {
-        console.error('Migration failed:', error);
+        console.error('✗ Migration failed:', error.message);
+        process.exit(1);
     } finally {
-        await connection.end();
+        client.release();
+        await pool.end();
     }
 }
 
-runSeed();
+runMigration();

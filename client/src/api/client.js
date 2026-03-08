@@ -2,8 +2,7 @@ import axios from 'axios';
 import { supabase } from '../lib/supabaseClient';
 
 const api = axios.create({
-    baseURL: '/api',
-    withCredentials: true,
+    baseURL: 'https://passgo-vipt.onrender.com/api',
 });
 
 // Attach Supabase JWT to every request
