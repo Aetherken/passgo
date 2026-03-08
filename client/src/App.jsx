@@ -11,73 +11,79 @@ import Support from "./pages/Student/Support";
 
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 
+
 const ProtectedRoute = ({ children, roles }) => {
-const role = localStorage.getItem("role");
 
-if (!role) {
-return <Navigate to="/auth" replace />;
-}
+  const { role } = useAuth();
 
-if (roles && !roles.includes(role)) {
-return <Navigate to="/dashboard" replace />;
-}
+  if (!role) {
+    return <Navigate to="/auth" replace />;
+  }
 
-return children;
+  if (roles && !roles.includes(role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 };
 
+
 function App() {
-return ( <AuthProvider> <BrowserRouter> <Routes>
+  return (
+    <AuthProvider>
+      <BrowserRouter>
 
-```
-      <Route path="/" element={<Landing />} />
+        <Routes>
 
-      <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<Landing />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute roles={["student", "admin", "superadmin"]}>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+          <Route path="/auth" element={<Auth />} />
 
-      <Route
-        path="/tracking"
-        element={
-          <ProtectedRoute roles={["student", "admin", "superadmin", "driver"]}>
-            <LiveTracking />
-          </ProtectedRoute>
-        }
-      />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute roles={["student", "admin", "superadmin"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-      <Route
-        path="/history"
-        element={
-          <ProtectedRoute roles={["student"]}>
-            <History />
-          </ProtectedRoute>
-        }
-      />
+          <Route
+            path="/tracking"
+            element={
+              <ProtectedRoute roles={["student", "admin", "superadmin", "driver"]}>
+                <LiveTracking />
+              </ProtectedRoute>
+            }
+          />
 
-      <Route path="/support" element={<Support />} />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute roles={["student"]}>
+                <History />
+              </ProtectedRoute>
+            }
+          />
 
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute roles={["admin", "superadmin", "driver"]}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+          <Route path="/support" element={<Support />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={["admin", "superadmin", "driver"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-    </Routes>
-  </BrowserRouter>
-</AuthProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
 
-);
+        </Routes>
+
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
 export default App;

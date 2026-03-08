@@ -1,21 +1,21 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(localStorage.getItem("role"));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
-    const getSession = async () => {
+    const init = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data?.session?.user || null);
+      setLoading(false);
     };
 
-    getSession();
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -24,11 +24,10 @@ export const AuthProvider = ({ children }) => {
     );
 
     return () => listener.subscription.unsubscribe();
-
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, setRole }}>
+    <AuthContext.Provider value={{ user, role, setRole, loading }}>
       {children}
     </AuthContext.Provider>
   );
