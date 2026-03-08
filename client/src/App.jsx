@@ -12,12 +12,27 @@ import Support from "./pages/Student/Support";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 
+const Spinner = () => (
+  <div style={{
+    minHeight: '100vh',
+    background: '#131718',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '14px',
+    letterSpacing: '2px'
+  }}>
+    LOADING...
+  </div>
+);
+
 const ProtectedRoute = ({ children, roles }) => {
   const { user, role, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <Spinner />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!role) return null;
+  if (!role) return <Spinner />;
   if (roles && !roles.includes(role)) return <Navigate to="/dashboard" replace />;
 
   return children;
@@ -26,7 +41,7 @@ const ProtectedRoute = ({ children, roles }) => {
 const RoleRedirect = () => {
   const { user, role, loading } = useAuth();
 
-  if (loading || !role) return null;
+  if (loading || !role) return <Spinner />;
   if (!user) return <Navigate to="/auth" replace />;
   if (role === "admin" || role === "superadmin") return <Navigate to="/admin" replace />;
   return <Navigate to="/dashboard" replace />;
@@ -42,7 +57,6 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
 
-          {/* After login, go here and get redirected based on role */}
           <Route path="/redirect" element={<RoleRedirect />} />
 
           <Route
