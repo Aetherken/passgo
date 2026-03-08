@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function Auth() {
-    const [mode, setMode] = useState('login'); // 'login' | 'register'
+    const [mode, setMode] = useState('login');
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -21,6 +21,7 @@ export default function Auth() {
         setLoading(true);
 
         try {
+
             if (mode === 'login') {
 
                 const { data, error } = await supabase.auth.signInWithPassword({
@@ -30,7 +31,20 @@ export default function Auth() {
 
                 if (error) throw error;
 
-                navigate('/dashboard');
+                // get role from users table
+                const { data: profile, error: roleError } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('email', form.email)
+                    .single();
+
+                if (roleError) throw roleError;
+
+                if (profile.role === 'superadmin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/dashboard');
+                }
 
             } else {
 
