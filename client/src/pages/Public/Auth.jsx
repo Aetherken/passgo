@@ -33,14 +33,16 @@ export default function Auth() {
 
                 if (error) throw error;
 
-                // get role from users table
-                const { data: profile, error: roleError } = await supabase
-                    .from('users')
-                    .select('role')
-                    .eq('email', form.email)
-                    .single();
+               if (mode === 'login') {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: form.email,
+    password: form.password
+  });
 
-                if (roleError) throw roleError;
+  if (error) throw error;
+
+  navigate("/redirect", { replace: true });
+}
 
                 const role = profile.role;
 
