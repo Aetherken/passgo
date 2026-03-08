@@ -3,22 +3,18 @@ import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+const fetchAndSetRole = async (userObj) => {
+  if (!userObj) {
+    setRole(null);
+    localStorage.removeItem("role");
+    return;
+  }
 
-  const fetchAndSetRole = async (userObj) => {
-    if (!userObj) {
-      setRole(null);
-      localStorage.removeItem("role");
-      return;
-    }
-    // Try localStorage first for speed, then verify from DB
-    const cached = localStorage.getItem("role");
-    if (cached) {
-      setRole(cached);
-    }
+  // Use cache immediately — don't clear it while refetching
+  const cached = localStorage.getItem("role");
+  if (cached) setRole(cached);
+
+  try {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
@@ -29,7 +25,10 @@ export const AuthProvider = ({ children }) => {
       setRole(profile.role);
       localStorage.setItem("role", profile.role);
     }
-  };
+  } catch (err) {
+    console.error("Role fetch failed:", err.message);
+  }
+};
 
   useEffect(() => {
     const init = async () => {
