@@ -30,7 +30,7 @@ export default function Dashboard() {
     useEffect(() => {
         api.get('/cities').then(r => setCities(Array.isArray(r.data) ? r.data : [])).catch(() => setCities([]));
         api.get('/routes').then(r => setRoutes(Array.isArray(r.data) ? r.data : [])).catch(() => setRoutes([]));
-        api.get('/admin/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
+        api.get('/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
     }, []);
 
     useEffect(() => {

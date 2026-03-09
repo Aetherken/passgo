@@ -69,7 +69,7 @@ export default function AdminDashboard() {
         loadBuses();
         loadStudents();
         loadTimeSlots();
-        api.get('/admin/fare')
+        api.get('/fare')
             .then(r => {
                 setFare(r.data.fare);
                 setNewFare(r.data.fare);

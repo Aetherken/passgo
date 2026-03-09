@@ -183,7 +183,7 @@ export const getDashboardStats = async (req, res) => {
     try {
         const totalBookingsResult = await db.query('SELECT COUNT(*) as total FROM bookings');
         const activePassesResult = await db.query("SELECT COUNT(*) as total FROM bookings WHERE status = 'active'");
-        const totalRevenueResult = await db.query('SELECT SUM(fare_paid) as total FROM bookings');
+        const totalRevenueResult = await db.query('SELECT COALESCE(SUM(fare_paid), 0) as total FROM bookings');
         const chartDataResult = await db.query(`
             SELECT TO_CHAR(booking_date, 'Mon DD') as date, COUNT(*) as passes 
             FROM bookings 
@@ -192,14 +192,15 @@ export const getDashboardStats = async (req, res) => {
         `);
 
         const stats = {
-            totalBookings: totalBookingsResult.rows[0]?.total ?? 0,
-            activePasses: activePassesResult.rows[0]?.total ?? 0,
-            totalRevenue: totalRevenueResult.rows[0]?.total ?? 0,
+            totalBookings: totalBookingsResult.rows[0]?.total || 0,
+            activePasses: activePassesResult.rows[0]?.total || 0,
+            totalRevenue: totalRevenueResult.rows[0]?.total || 0,
             chartData: (chartDataResult.rows || []).reverse()
         };
 
-        res.status(200).json(stats);
+        return res.status(200).json(stats);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Stats Crash:', error);
+        return res.status(500).json({ message: 'Internal stats error' });
     }
 };

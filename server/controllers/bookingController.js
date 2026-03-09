@@ -56,10 +56,10 @@ export const createBooking = async (req, res) => {
 
         const qrToken = crypto.randomUUID();
 
-        // Create booking
+        // Safe insertion with returning id
         const bookingResult = await db.query(
             'INSERT INTO bookings (user_id, time_slot_id, booking_date, fare_paid, payment_method, qr_code_token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-            [userId, timeSlotId, bookingDate, farePaid, paymentMethod, qrToken]
+            [userId, timeSlotId, bookingDate, farePaid || 25, paymentMethod || 'upi', qrToken]
         );
 
         // Decrement seats
@@ -95,9 +95,10 @@ export const createBooking = async (req, res) => {
         <p>Have a great trip!</p>
       </div>
     `;
-        await sendEmail({ to: user.email, subject: 'PassGo Booking Confirmation', html: emailHtml });
+        // Fire and forget email to avoid slowing down the response
+        sendEmail({ to: user.email, subject: 'PassGo Booking Confirmation', html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
 
-        res.status(201).json({
+        return res.status(201).json({
             message: 'Booking successful',
             bookingId: bookingResult.rows[0].id,
             qrToken

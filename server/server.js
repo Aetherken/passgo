@@ -72,17 +72,49 @@ app.use(
 // Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Route Definitions
+// Public Routes (No Auth)
+app.use('/api/public', (req, res, next) => {
+    // Shared public getters
+    next();
+});
+
+// Primary Mounts for exactly matching Frontend calls
+import { getCities, getRoutes } from './controllers/bookingController.js';
+
+app.get('/api/cities', getCities);
+app.get('/api/routes', getRoutes);
+app.get('/api/fare', async (req, res) => {
+    try {
+        const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY updated_at DESC LIMIT 1');
+        const fare = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
+        res.status(200).json({ fare });
+    } catch (err) {
+        res.status(500).json({ message: 'Error loading fare.' });
+    }
+});
+
+// Standard API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Mount booking routes directly at /api for cities/routes compatibility
-app.use('/api', bookingRoutes);
-
-// Health Route
+// Shared Health Check
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'PassGo API is running' });
+    res.status(200).json({ status: 'ok', msg: 'API up' });
+});
+
+// Catch-all 404
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ message: `Path ${req.url} not found` });
+});
+
+// Log server-side errors to Render console
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
 });
 
 // Error handling middleware
