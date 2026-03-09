@@ -152,3 +152,14 @@ export const verifyBooking = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const getFare = async (req, res) => {
+    try {
+        const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY id DESC LIMIT 1');
+        const fareValue = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
+        return res.status(200).json({ fare: fareValue });
+    } catch (error) {
+        console.error('SERVER-SIDE FARE ERROR:', error);
+        return res.status(500).json({ message: 'Internal fare error', error: error.message });
+    }
+};

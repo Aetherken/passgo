@@ -10,7 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import db from './config/db.js';
-import { getCities, getRoutes, getSlotsByRoute } from './controllers/bookingController.js';
+import { getCities, getRoutes, getSlotsByRoute, getFare } from './controllers/bookingController.js';
 
 dotenv.config();
 
@@ -84,16 +84,7 @@ app.use('/api/public', (req, res, next) => {
 app.get('/api/cities', getCities);
 app.get('/api/routes', getRoutes);
 app.get('/api/routes/:id/slots', getSlotsByRoute);
-app.get('/api/fare', async (req, res) => {
-    try {
-        const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY id DESC LIMIT 1');
-        const fareValue = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
-        res.status(200).json({ fare: fareValue });
-    } catch (err) {
-        console.error('Fare GET Error:', err);
-        res.status(500).json({ message: 'Error loading fare.' });
-    }
-});
+app.get('/api/fare', getFare);
 
 // Standard API Routes
 app.use('/api/auth', authRoutes);
