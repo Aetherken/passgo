@@ -16,7 +16,7 @@ const upload = multer({ storage });
 // Public fare endpoint (no auth needed - students need to see the fare)
 router.get('/fare', async (req, res) => {
     try {
-        const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY updated_at DESC LIMIT 1');
+        const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY id DESC LIMIT 1');
         const fare = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
         res.status(200).json({ fare });
     } catch (err) {

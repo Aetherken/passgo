@@ -51,7 +51,7 @@ export const createBooking = async (req, res) => {
             return res.status(400).json({ message: 'No seats available for this slot.' });
         }
 
-        const fareResult = await db.query('SELECT flat_fare FROM fare_config ORDER BY updated_at DESC LIMIT 1');
+        const fareResult = await db.query('SELECT flat_fare FROM fare_config ORDER BY id DESC LIMIT 1');
         const farePaid = fareResult.rows.length > 0 ? fareResult.rows[0].flat_fare : 25.00;
 
         const qrToken = crypto.randomUUID();

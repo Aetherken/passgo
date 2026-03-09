@@ -186,9 +186,17 @@ export default function AdminDashboard() {
     };
 
     const handleFareUpdate = async () => {
-        await api.patch('/admin/fare', { flatFare: newFare });
-        setFare(newFare);
-        alert('Fare updated successfully!');
+        try {
+            const fareNum = Number(newFare);
+            if (isNaN(fareNum) || fareNum < 0) return alert('Please enter a valid fare price.');
+
+            await api.patch('/admin/fare', { flatFare: fareNum });
+            setFare(fareNum);
+            alert('Fare updated successfully!');
+        } catch (err) {
+            console.error('Fare update failed:', err);
+            alert('Failed to update fare. Check console for details.');
+        }
     };
 
     const navItems = NAV_ITEMS.filter(n => !n.superOnly || user?.role === 'superadmin');
