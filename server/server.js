@@ -79,16 +79,18 @@ app.use('/api/public', (req, res, next) => {
 });
 
 // Primary Mounts for exactly matching Frontend calls
-import { getCities, getRoutes } from './controllers/bookingController.js';
+import { getCities, getRoutes, getSlotsByRoute } from './controllers/bookingController.js';
 
 app.get('/api/cities', getCities);
 app.get('/api/routes', getRoutes);
+app.get('/api/routes/:id/slots', getSlotsByRoute);
 app.get('/api/fare', async (req, res) => {
     try {
         const result = await db.query('SELECT flat_fare FROM fare_config ORDER BY updated_at DESC LIMIT 1');
-        const fare = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
-        res.status(200).json({ fare });
+        const fareValue = result.rows.length > 0 ? Number(result.rows[0].flat_fare) : 25;
+        res.status(200).json({ fare: fareValue });
     } catch (err) {
+        console.error('Fare Error:', err);
         res.status(500).json({ message: 'Error loading fare.' });
     }
 });
