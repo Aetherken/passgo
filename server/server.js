@@ -18,6 +18,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Trust Render's proxy for secure cookies
+app.set('trust proxy', 1);
+
 // CORS configuration - Allow Vercel frontend and localhost
 app.use(cors({
     origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'].filter(Boolean),
@@ -35,13 +38,13 @@ app.use(
         secret: process.env.SESSION_SECRET || 'passgo_super_secret_key',
         resave: false,
         saveUninitialized: false,
+        name: 'passgo.sid', // custom name to avoid generic connect.sid
         cookie: {
             secure: isProduction,
             httpOnly: true,
-            sameSite: isProduction ? 'none' : 'lax', // Must be 'none' for cross-site cookies
+            sameSite: isProduction ? 'none' : 'lax', // Lax for dev, None for cross-siteprod
             maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-        },
-        proxy: true // Required for Render/Railway behind reverse proxy
+        }
     })
 );
 

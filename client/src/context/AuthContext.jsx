@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import api from "../api/client";
 
 const AuthContext = createContext();
 
@@ -8,77 +8,41 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const resolveRole = async (sessionUser) => {
-    if (!sessionUser) {
+  const checkAuth = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data.user) {
+        setUser(response.data.user);
+        setRole(response.data.user.role);
+        localStorage.setItem("role", response.data.user.role);
+      }
+    } catch (err) {
       setUser(null);
       setRole(null);
       localStorage.removeItem("role");
-      setLoading(false);
-      return;
-    }
-
-    setUser(sessionUser);
-
-    // 1. Try user_metadata first (instant, no network)
-    const metaRole = sessionUser.user_metadata?.role;
-    if (metaRole) {
-      setRole(metaRole);
-      localStorage.setItem("role", metaRole);
-      setLoading(false);
-      return;
-    }
-
-    // 2. Try localStorage cache
-    const cached = localStorage.getItem("role");
-    if (cached) {
-      setRole(cached);
-      setLoading(false);
-      return;
-    }
-
-    // 3. Fallback: fetch from DB (for users without metadata role set)
-    try {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("email", sessionUser.email)
-        .single();
-
-      const dbRole = profile?.role || "student";
-      setRole(dbRole);
-      localStorage.setItem("role", dbRole);
-    } catch (err) {
-      console.error("Role fetch failed:", err.message);
-      setRole("student"); // safe default
-      localStorage.setItem("role", "student");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        // Clear cache on fresh sign-in so role is re-fetched
-        if (_event === "SIGNED_IN") {
-          localStorage.removeItem("role");
-        }
-        resolveRole(session?.user || null);
-      }
-    );
-
-    return () => listener.subscription.unsubscribe();
+    checkAuth();
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("role");
-    setUser(null);
-    setRole(null);
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      localStorage.removeItem("role");
+      setUser(null);
+      setRole(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, setRole, loading, logout }}>
+    <AuthContext.Provider value={{ user, role, setRole, loading, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

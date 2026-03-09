@@ -16,6 +16,7 @@ export default function Auth() {
 
     const handleChange = e =>
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    const { checkAuth } = useAuth();
 
     const handleSubmit = async e => {
         e.preventDefault();
@@ -30,6 +31,7 @@ export default function Auth() {
                 });
 
                 if (response.data.user) {
+                    await checkAuth();
                     navigate("/redirect", { replace: true });
                 }
             } else {
@@ -42,6 +44,7 @@ export default function Auth() {
                 });
 
                 if (response.data.user) {
+                    await checkAuth();
                     navigate('/dashboard');
                 }
             }
