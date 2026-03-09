@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Middleware
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -27,8 +29,9 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: {
-            secure: process.env.NODE_ENV === 'production',
+            secure: isProduction,
             httpOnly: true,
+            sameSite: isProduction ? 'none' : 'lax',
             maxAge: 1000 * 60 * 60 * 24 * 7
         }
     })
