@@ -18,12 +18,33 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Trust Render's proxy for secure cookies
+// MUST be at the very top for Render/Railway
 app.set('trust proxy', 1);
 
-// CORS configuration - Allow Vercel frontend and localhost
+// Middleware
+app.use((req, res, next) => {
+    if (isProduction) {
+        console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+    }
+    next();
+});
+
+// Robust CORS
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://localhost:3000'
+].map(u => u?.replace(/\/$/, '')).filter(Boolean); // remove trailing slashes
+
 app.use(cors({
-    origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'].filter(Boolean),
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.some(ao => origin.startsWith(ao))) {
+            callback(null, true);
+        } else {
+            console.warn(`Blocked by CORS: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']

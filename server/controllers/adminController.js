@@ -191,12 +191,14 @@ export const getDashboardStats = async (req, res) => {
             ORDER BY booking_date DESC LIMIT 7
         `);
 
-        res.status(200).json({
-            totalBookings: totalBookingsResult.rows[0].total,
-            activePasses: activePassesResult.rows[0].total,
-            totalRevenue: totalRevenueResult.rows[0].total || 0,
-            chartData: chartDataResult.rows.reverse()
-        });
+        const stats = {
+            totalBookings: totalBookingsResult.rows[0]?.total ?? 0,
+            activePasses: activePassesResult.rows[0]?.total ?? 0,
+            totalRevenue: totalRevenueResult.rows[0]?.total ?? 0,
+            chartData: (chartDataResult.rows || []).reverse()
+        };
+
+        res.status(200).json(stats);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

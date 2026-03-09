@@ -73,6 +73,7 @@ export const requireSuperAdmin = async (req, res, next) => {
             return res.status(403).json({ message: 'Superadmin access required.' });
         }
 
+        req.user = result.rows[0];
         next();
     } catch (err) {
         return res.status(403).json({ message: 'Access denied.' });
@@ -87,15 +88,16 @@ export const requireDriver = async (req, res, next) => {
 
     try {
         const result = await db.query(
-            'SELECT role FROM users WHERE id = $1',
+            'SELECT id, name, role FROM users WHERE id = $1',
             [req.session.userId]
         );
 
-        const role = result.rows[0]?.role;
-        if (role !== 'driver' && role !== 'admin' && role !== 'superadmin') {
+        const user = result.rows[0];
+        if (!user || (user.role !== 'driver' && user.role !== 'admin' && user.role !== 'superadmin')) {
             return res.status(403).json({ message: 'Driver access required.' });
         }
 
+        req.user = user;
         next();
     } catch (err) {
         return res.status(403).json({ message: 'Access denied.' });
