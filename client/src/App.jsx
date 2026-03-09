@@ -10,6 +10,7 @@ import History from "./pages/Student/History";
 import Support from "./pages/Student/Support";
 
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+import DriverDashboard from "./pages/Driver/DriverDashboard";
 
 
 const Spinner = () => (
@@ -44,6 +45,7 @@ const RoleRedirect = () => {
   if (loading || !role) return <Spinner />;
   if (!user) return <Navigate to="/auth" replace />;
   if (role === "admin" || role === "superadmin") return <Navigate to="/admin" replace />;
+  if (role === "driver") return <Navigate to="/driver" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 
@@ -91,8 +93,17 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roles={["admin", "superadmin", "driver"]}>
+              <ProtectedRoute roles={["admin", "superadmin"]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute roles={["driver", "admin", "superadmin"]}>
+                <DriverDashboard />
               </ProtectedRoute>
             }
           />
