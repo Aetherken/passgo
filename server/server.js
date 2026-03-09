@@ -103,9 +103,9 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', msg: 'API up' });
 });
 
-// Catch-all 404
-app.use('/api/*', (req, res) => {
-    res.status(404).json({ message: `Path ${req.url} not found` });
+// Catch-all 404 for API
+app.use('/api', (req, res) => {
+    res.status(404).json({ message: `API Path ${req.url} not found` });
 });
 
 // Log server-side errors to Render console
