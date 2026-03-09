@@ -1,25 +1,73 @@
-// server.js
+import express from 'express';
+import cors from 'cors';
+import session from 'express-session';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Remove session middleware
-// const session = require('express-session');
-// app.use(session({ ... }));
+// Routes
+import authRoutes from './routes/authRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
-const express = require('express');
-const cors = require('cors');
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Proper CORS configuration for cross-origin JWT token requests
+// CORS configuration - Allow Vercel frontend and localhost
 app.use(cors({
-    origin: '*', // Adjust the origin as needed
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'].filter(Boolean),
     credentials: true,
-    allowedHeaders: ['Authorization', 'Content-Type'], // Accept Bearer token headers
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
 }));
 
 app.use(express.json());
-// other middleware and routes
+app.use(express.urlencoded({ extended: true }));
 
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
+// Session configuration
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || 'passgo_super_secret_key',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: isProduction,
+            httpOnly: true,
+            sameSite: isProduction ? 'none' : 'lax', // Must be 'none' for cross-site cookies
+            maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+        },
+        proxy: true // Required for Render/Railway behind reverse proxy
+    })
+);
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Route Definitions
+app.use('/api/auth', authRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Mount booking routes directly at /api for cities/routes compatibility
+app.use('/api', bookingRoutes);
+
+// Health Route
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'PassGo API is running' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: 'Something went wrong!', error: err.message });
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
