@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import api from '../../api/client';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from "../../context/AuthContext";
 
@@ -13,7 +14,6 @@ export default function Auth() {
 
     const navigate = useNavigate();
 
-
     const handleChange = e =>
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -23,39 +23,31 @@ export default function Auth() {
         setLoading(true);
 
         try {
-
             if (mode === 'login') {
-
-                const { error } = await supabase.auth.signInWithPassword({
+                const response = await api.post('/auth/login', {
                     email: form.email,
                     password: form.password
                 });
 
-                if (error) throw error;
-
-                navigate("/redirect", { replace: true });
-
+                if (response.data.user) {
+                    navigate("/redirect", { replace: true });
+                }
             } else {
-
-                const { data, error } = await supabase.auth.signUp({
+                const response = await api.post('/auth/register', {
+                    name: form.name,
+                    studentId: form.studentId,
+                    phone: form.phone,
                     email: form.email,
-                    password: form.password,
-                    options: {
-                        data: {
-                            name: form.name,
-                            studentId: form.studentId,
-                            phone: form.phone
-                        }
-                    }
+                    password: form.password
                 });
 
-                if (error) throw error;
-
-                navigate('/dashboard');
+                if (response.data.user) {
+                    navigate('/dashboard');
+                }
             }
 
         } catch (err) {
-            setError(err.message || 'Something went wrong. Please try again.');
+            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -91,11 +83,10 @@ export default function Auth() {
                                     setMode(m);
                                     setError('');
                                 }}
-                                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${
-                                    mode === m
-                                        ? 'bg-[#131718] text-white shadow'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${mode === m
+                                    ? 'bg-[#131718] text-white shadow'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 {m === 'login' ? 'Log In' : 'Sign Up'}
                             </button>
@@ -207,8 +198,8 @@ export default function Auth() {
                             {loading
                                 ? 'Please wait...'
                                 : mode === 'login'
-                                ? 'Log In →'
-                                : 'Create Account →'}
+                                    ? 'Log In →'
+                                    : 'Create Account →'}
                         </button>
                     </form>
 
