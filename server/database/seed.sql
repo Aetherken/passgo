@@ -22,7 +22,7 @@ ON CONFLICT (bus_number) DO NOTHING;
 
 -- 3. Insert Routes (from VJEC to each city)
 INSERT INTO routes (destination_id, distance_km, estimated_duration_mins)
-SELECT id, dist, dur FROM (VALUES
+SELECT id, CAST(v.dist AS DECIMAL(5,2)), CAST(v.dur AS INT) FROM (VALUES
   ('Kannur',      45.5, 90),
   ('Thalassery',  52.0, 100),
   ('Payyanur',    38.0, 75),
@@ -34,7 +34,7 @@ JOIN cities c ON c.name = v.city;
 
 -- 4. Insert Time Slots
 INSERT INTO time_slots (route_id, bus_id, departure_time, arrival_time, available_seats)
-SELECT r.id, b.id, ts.dep, ts.arr, ts.seats
+SELECT r.id, b.id, CAST(ts.dep AS TIME), CAST(ts.arr AS TIME), CAST(ts.seats AS INT)
 FROM (VALUES
   ('Kannur',      'KL-58-A-1111', '07:30:00', '09:00:00', 50),
   ('Kannur',      'KL-58-A-1111', '16:30:00', '18:00:00', 50),

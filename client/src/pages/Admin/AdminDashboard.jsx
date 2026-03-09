@@ -57,25 +57,54 @@ export default function AdminDashboard() {
     const [notifSent, setNotifSent] = useState(false);
     const [sentNotifs, setSentNotifs] = useState([]);
 
-    // Fare
     const [fare, setFare] = useState(25);
     const [newFare, setNewFare] = useState(25);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (!user) { navigate('/auth'); return; }
+
+        setError(null);
         loadStats();
         loadBuses();
         loadStudents();
         loadTimeSlots();
         api.get('/admin/fare')
-            .then(r => { setFare(r.data.fare); setNewFare(r.data.fare); })
-            .catch(() => {});
+            .then(r => {
+                setFare(r.data.fare);
+                setNewFare(r.data.fare);
+            })
+            .catch(err => console.error('Fare load failed:', err));
     }, [user]);
 
-    const loadStats = () => api.get(`/admin/stats`).then(r => setStats(r.data || null)).catch(() => {});
-    const loadBuses = () => api.get('/admin/buses').then(r => setBuses(Array.isArray(r.data) ? r.data : [])).catch(() => {});
-    const loadStudents = () => api.get('/admin/students').then(r => setStudents(Array.isArray(r.data) ? r.data : [])).catch(() => {});
-    const loadTimeSlots = () => api.get('/admin/timeslots').then(r => setTimeSlots(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    const loadStats = () =>
+        api.get(`/admin/stats`)
+            .then(r => setStats(r.data || null))
+            .catch(err => {
+                console.error('Stats load failed:', err);
+                setError('Failed to load dashboard metrics.');
+            });
+
+    const loadBuses = () =>
+        api.get('/admin/buses')
+            .then(r => setBuses(Array.isArray(r.data) ? r.data : []))
+            .catch(err => {
+                console.error('Buses load failed:', err);
+            });
+
+    const loadStudents = () =>
+        api.get('/admin/students')
+            .then(r => setStudents(Array.isArray(r.data) ? r.data : []))
+            .catch(err => {
+                console.error('Students load failed:', err);
+            });
+
+    const loadTimeSlots = () =>
+        api.get('/admin/timeslots')
+            .then(r => setTimeSlots(Array.isArray(r.data) ? r.data : []))
+            .catch(err => {
+                console.error('Timeslots load failed:', err);
+            });
 
     const handleAddBus = async () => {
         const fd = new FormData();
