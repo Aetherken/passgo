@@ -100,6 +100,50 @@ export const verifyEmail = async (req, res) => {
     }
 };
 
+export const resendVerification = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        if (!email) return res.status(400).json({ message: 'Email is required.' });
+
+        const result = await db.query('SELECT name, is_verified FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const user = result.rows[0];
+        if (user.is_verified) {
+            return res.status(400).json({ message: 'Account is already verified.' });
+        }
+
+        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+        await db.query('UPDATE users SET verification_token = $1 WHERE email = $2', [verificationToken, email]);
+
+        const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 30px; border: 1px solid #eee; border-radius: 20px; max-width: 600px; margin: 0 auto; background: #fff;">
+        <h1 style="color: #131718; text-transform: uppercase; letter-spacing: 5px; text-align: center;">PASSGO</h1>
+        <h2 style="text-align: center;">Your New Verification Code</h2>
+        <p>Hi ${user.name},</p>
+        <p>You requested a new verification code. Please use the code below to activate your account:</p>
+        <div style="background: #f8f8f8; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 12px; text-align: center; border-radius: 12px; color: #131718; border: 2px solid #131718;">
+          ${verificationToken}
+        </div>
+        <br>
+        <p>Best regards,<br>The PassGo Team</p>
+      </div>
+    `;
+
+        sendEmail({ to: email, subject: 'Your PassGo Verification Code', html: emailHtml })
+            .catch(err => console.error('Email Resend Error:', err));
+
+        res.status(200).json({ message: 'Verification code resent successfully.' });
+
+    } catch (error) {
+        console.error('Resend Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
 export const login = async (req, res) => {
     const { email, password } = req.body;
 
