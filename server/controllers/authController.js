@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import db from '../config/db.js';
 import { sendEmail } from '../utils/mailer.js';
+import crypto from 'crypto';
 
 export const register = async (req, res) => {
     const { name, studentId, phone, email, password } = req.body;
@@ -10,7 +11,6 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: 'All fields are required.' });
         }
 
-        // PostgreSQL uses $1, $2 instead of ?
         const existing = await db.query(
             'SELECT id FROM users WHERE email = $1 OR student_id = $2',
             [email, studentId]
@@ -22,40 +22,81 @@ export const register = async (req, res) => {
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // PostgreSQL uses RETURNING instead of insertId
+        // Generate a 6-digit verification token
+        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+
         const result = await db.query(
-            'INSERT INTO users (name, student_id, phone, email, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [name, studentId, phone || null, email, passwordHash]
+            'INSERT INTO users (name, student_id, phone, email, password_hash, verification_token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [name, studentId, phone || null, email, passwordHash, verificationToken]
         );
 
         const newUser = result.rows[0];
         req.session.userId = newUser.id;
 
         const emailHtml = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Welcome to PassGo!</h2>
+      <div style="font-family: Arial, sans-serif; padding: 30px; border: 1px solid #eee; border-radius: 20px; max-width: 600px; margin: 0 auto; background: #fff;">
+        <h1 style="color: #131718; text-transform: uppercase; letter-spacing: 5px; text-align: center;">PASSGO</h1>
+        <h2 style="text-align: center;">Verify Your Email</h2>
         <p>Hi ${name},</p>
-        <p>Your account has been successfully created.</p>
-        <p><strong>Student ID:</strong> ${studentId}</p>
-        <p>You can now log in and book your campus bus passes seamlessly.</p>
+        <p>Your account has been successfully created. Please use the verification code below to activate your account:</p>
+        <div style="background: #f8f8f8; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 12px; text-align: center; border-radius: 12px; color: #131718; border: 2px solid #131718;">
+          ${verificationToken}
+        </div>
         <br>
+        <p>Alternatively, you can click the link below:</p>
+        <p style="text-align: center;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/verify?token=${verificationToken}" 
+             style="background: #131718; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+             Verify Account
+          </a>
+        </p>
         <p>Best regards,<br>The PassGo Team</p>
       </div>
     `;
-        await sendEmail({ to: email, subject: 'Welcome to PassGo', html: emailHtml });
+
+        // Send email non-blocking to prevent registration hang
+        sendEmail({ to: email, subject: 'Verify Your PassGo Account', html: emailHtml })
+            .catch(err => console.error('Email Send Error (Async):', err));
 
         res.status(201).json({
-            message: 'Registration successful.',
-            user: { id: newUser.id, name, email, role: 'student' }
+            message: 'Registration successful. Please verify your email.',
+            user: { id: newUser.id, name, email, role: 'student', is_verified: false }
         });
 
     } catch (error) {
-        console.error('Registration Error:', JSON.stringify(error, null, 2));
-        res.status(500).json({ 
+        console.error('Registration Error:', error);
+        res.status(500).json({
             message: error.message || 'Unknown error',
-            detail: error.detail || '',
             code: error.code || ''
         });
+    }
+};
+
+export const verifyEmail = async (req, res) => {
+    const { token, email } = req.body;
+
+    try {
+        if (!token) return res.status(400).json({ message: 'Token is required.' });
+
+        // If email is provided, use it to narrow search, else just use token
+        const query = email
+            ? 'SELECT id FROM users WHERE email = $1 AND verification_token = $2'
+            : 'SELECT id FROM users WHERE verification_token = $1';
+        const params = email ? [email, token] : [token];
+
+        const result = await db.query(query, params);
+        if (result.rows.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired verification token.' });
+        }
+
+        const userId = result.rows[0].id;
+        await db.query('UPDATE users SET is_verified = TRUE, verification_token = NULL WHERE id = $1', [userId]);
+
+        res.status(200).json({ message: 'Email verified successfully. You can now use all features.' });
+
+    } catch (error) {
+        console.error('Verification Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
@@ -76,6 +117,10 @@ export const login = async (req, res) => {
 
         if (!user.is_active) {
             return res.status(403).json({ message: 'Account deactivated. Please contact administration.' });
+        }
+
+        if (user.role === 'student' && !user.is_verified) {
+            return res.status(403).json({ message: 'Please verify your email before logging in.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -113,7 +158,7 @@ export const getMe = async (req, res) => {
 
     try {
         const result = await db.query(
-            'SELECT id, name, student_id, email, phone, role, is_active FROM users WHERE id = $1',
+            'SELECT id, name, student_id, email, phone, role, is_active, is_verified FROM users WHERE id = $1',
             [req.session.userId]
         );
         if (result.rows.length === 0) {
