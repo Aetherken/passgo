@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -17,17 +17,19 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async ({ to, subject, html }) => {
     try {
-        console.log(`Attempting to send email to ${to}...`);
+        console.log(`[MAIL] Attempting to send to ${to}...`);
+        const fromEmail = process.env.EMAIL_FROM || `PassGo <${process.env.EMAIL_USER}>`;
+
         const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM?.replace(/^"(.*)"$/, '$1') || '"PassGo Admin" <noreply@passgo.com>',
+            from: fromEmail.replace(/"/g, ''), // Clean name/email
             to,
             subject,
             html,
         });
-        console.log(`✓ Email sent successfully to ${to}: ${info.messageId}`);
+        console.log(`[MAIL] ✓ Success! ID: ${info.messageId}`);
         return true;
     } catch (error) {
-        console.error(`✗ Error sending email to ${to}:`, error.message);
+        console.error(`[MAIL] ✗ Failed to ${to}:`, error.message);
         return false;
     }
 };
