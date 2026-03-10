@@ -45,7 +45,7 @@ export default function Auth() {
 
                 if (response.data.user) {
                     await checkAuth();
-                    navigate('/verify');
+                    navigate('/dashboard');
                 }
             }
 

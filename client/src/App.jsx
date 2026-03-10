@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import Landing from "./pages/Public/Landing";
 import Auth from "./pages/Public/Auth";
-import VerifyEmail from "./pages/Public/VerifyEmail";
 
 import Dashboard from "./pages/Student/Dashboard";
 import LiveTracking from "./pages/Student/LiveTracking";
@@ -36,11 +35,6 @@ const ProtectedRoute = ({ children, roles }) => {
   if (!user) return <Navigate to="/auth" replace />;
   if (!role) return <Spinner />;
 
-  // Enforce email verification for students
-  if (role === 'student' && !user.is_verified) {
-    return <Navigate to="/verify" replace />;
-  }
-
   if (roles && !roles.includes(role)) return <Navigate to="/dashboard" replace />;
 
   return children;
@@ -51,10 +45,6 @@ const RoleRedirect = () => {
 
   if (loading || !role) return <Spinner />;
   if (!user) return <Navigate to="/auth" replace />;
-
-  if (role === 'student' && !user.is_verified) {
-    return <Navigate to="/verify" replace />;
-  }
 
   if (role === "admin" || role === "superadmin") return <Navigate to="/admin" replace />;
   if (role === "driver") return <Navigate to="/driver" replace />;
@@ -70,7 +60,6 @@ function App() {
 
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/verify" element={<VerifyEmail />} />
 
           <Route path="/redirect" element={<RoleRedirect />} />
 
