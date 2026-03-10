@@ -33,6 +33,12 @@ export const register = async (req, res) => {
         const newUser = result.rows[0];
         req.session.userId = newUser.id;
 
+        // Log the token for server console (fallback if email fails)
+        console.log(`[VERIFICATION] Token for ${email}: ${verificationToken}`);
+
+        const clientUrl = process.env.CLIENT_URL?.replace(/\/$/, '') || 'http://localhost:5173';
+        const verifyLink = `${clientUrl}/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+
         const emailHtml = `
       <div style="font-family: Arial, sans-serif; padding: 30px; border: 1px solid #eee; border-radius: 20px; max-width: 600px; margin: 0 auto; background: #fff;">
         <h1 style="color: #131718; text-transform: uppercase; letter-spacing: 5px; text-align: center;">PASSGO</h1>
@@ -45,7 +51,7 @@ export const register = async (req, res) => {
         <br>
         <p>Alternatively, you can click the link below:</p>
         <p style="text-align: center;">
-          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/verify?token=${verificationToken}" 
+          <a href="${verifyLink}" 
              style="background: #131718; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
              Verify Account
           </a>
@@ -118,6 +124,8 @@ export const resendVerification = async (req, res) => {
 
         const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
         await db.query('UPDATE users SET verification_token = $1 WHERE email = $2', [verificationToken, email]);
+
+        console.log(`[VERIFICATION] New Token generated for ${email}: ${verificationToken}`);
 
         const emailHtml = `
       <div style="font-family: Arial, sans-serif; padding: 30px; border: 1px solid #eee; border-radius: 20px; max-width: 600px; margin: 0 auto; background: #fff;">
