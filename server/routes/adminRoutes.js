@@ -1,6 +1,13 @@
 import express from 'express';
 import multer from 'multer';
-import { getBuses, addBus, updateBus, deleteBus, getStudents, toggleStudentState, flagStudent, sendNotification, getDashboardStats, getTimeSlots, updateTimeSlot } from '../controllers/adminController.js';
+import {
+    getBuses, addBus, updateBus, deleteBus,
+    getStudents, toggleStudentState, flagStudent,
+    sendNotification, getDashboardStats,
+    getTimeSlots, updateTimeSlot,
+    getAllBookings, getRevenueData,
+    getDrivers, addDriver
+} from '../controllers/adminController.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import db from '../config/db.js';
 
@@ -39,6 +46,16 @@ router.delete('/buses/:id', deleteBus);
 // Time Slot Management
 router.get('/timeslots', getTimeSlots);
 router.put('/timeslots/:id', updateTimeSlot);
+
+// All Bookings
+router.get('/bookings', getAllBookings);
+
+// Revenue Data
+router.get('/revenue', getRevenueData);
+
+// Driver Management
+router.get('/drivers', getDrivers);
+router.post('/drivers', requireSuperAdmin, addDriver);
 
 // Student Management
 router.get('/students', getStudents);

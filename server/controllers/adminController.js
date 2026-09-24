@@ -204,3 +204,81 @@ export const getDashboardStats = async (req, res) => {
         return res.status(500).json({ message: 'Internal stats error' });
     }
 };
+
+// ---- ALL BOOKINGS (Admin view) ----
+export const getAllBookings = async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                b.id, b.booking_date, b.status, b.fare_paid, b.payment_method,
+                b.qr_code_token, b.created_at,
+                u.name as student_name, u.student_id, u.email as student_email,
+                r.origin, c.name as destination,
+                ts.departure_time, ts.arrival_time,
+                bus.bus_number, bus.operator_name
+            FROM bookings b
+            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN time_slots ts ON b.time_slot_id = ts.id
+            LEFT JOIN routes r ON ts.route_id = r.id
+            LEFT JOIN cities c ON r.destination_id = c.id
+            LEFT JOIN buses bus ON ts.bus_id = bus.id
+            ORDER BY b.created_at DESC
+            LIMIT 500
+        `);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('getAllBookings error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// ---- REVENUE REPORT ----
+export const getRevenueData = async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                TO_CHAR(booking_date, 'YYYY-MM-DD') as date,
+                COUNT(*) as bookings,
+                SUM(fare_paid) as revenue,
+                COUNT(CASE WHEN status = 'used' THEN 1 END) as verified,
+                COUNT(CASE WHEN status = 'active' THEN 1 END) as active
+            FROM bookings
+            GROUP BY booking_date
+            ORDER BY booking_date DESC
+            LIMIT 30
+        `);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('getRevenueData error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// ---- DRIVER MANAGEMENT ----
+export const getDrivers = async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT id, name, email, phone, is_active, created_at FROM users WHERE role = 'driver' ORDER BY created_at DESC"
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const addDriver = async (req, res) => {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ message: 'Name, email and password are required.' });
+    try {
+        const bcrypt = await import('bcrypt');
+        const hash = await bcrypt.default.hash(password, 12);
+        const result = await db.query(
+            "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, 'driver') RETURNING id, name, email",
+            [name, email, hash]
+        );
+        res.status(201).json({ message: 'Driver account created.', driver: result.rows[0] });
+    } catch (error) {
+        if (error.code === '23505') return res.status(409).json({ message: 'Email already registered.' });
+        res.status(500).json({ message: error.message });
+    }
+};

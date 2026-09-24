@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
     LayoutDashboard, Bus, BookOpen, Users, FileText, Bell, Settings,
-    LogOut, Plus, Trash2, X, AlertTriangle, Download, Send, Pencil, Clock
+    LogOut, Plus, Trash2, X, AlertTriangle, Download, Send, Pencil, Clock, Truck
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
     { id: 'students', icon: <Users size={18} />, label: 'Students' },
     { id: 'reports', icon: <FileText size={18} />, label: 'Reports' },
     { id: 'notifications', icon: <Bell size={18} />, label: 'Notifications' },
+    { id: 'drivers', icon: <Truck size={18} />, label: 'Driver Accounts', superOnly: true },
     { id: 'system', icon: <Settings size={18} />, label: 'System', superOnly: true },
 ];
 
@@ -57,7 +58,21 @@ export default function AdminDashboard() {
     const [notifSent, setNotifSent] = useState(false);
     const [sentNotifs, setSentNotifs] = useState([]);
 
+    // Bookings
+    const [allBookings, setAllBookings] = useState([]);
+    const [bookingSearch, setBookingSearch] = useState('');
+    const [bookingStatusFilter, setBookingStatusFilter] = useState('');
+
+    // Revenue / Reports
+    const [revenueData, setRevenueData] = useState([]);
+
+    // Driver Management
+    const [drivers, setDrivers] = useState([]);
+    const [driverForm, setDriverForm] = useState({ name: '', email: '', password: '' });
+    const [driverMsg, setDriverMsg] = useState('');
+
     const [fare, setFare] = useState(25);
+
     const [newFare, setNewFare] = useState(25);
     const [error, setError] = useState(null);
 
@@ -69,6 +84,9 @@ export default function AdminDashboard() {
         loadBuses();
         loadStudents();
         loadTimeSlots();
+        loadAllBookings();
+        loadRevenueData();
+        loadDrivers();
         api.get('/fare')
             .then(r => {
                 setFare(r.data.fare);
@@ -88,23 +106,32 @@ export default function AdminDashboard() {
     const loadBuses = () =>
         api.get('/admin/buses')
             .then(r => setBuses(Array.isArray(r.data) ? r.data : []))
-            .catch(err => {
-                console.error('Buses load failed:', err);
-            });
+            .catch(err => console.error('Buses load failed:', err));
 
     const loadStudents = () =>
         api.get('/admin/students')
             .then(r => setStudents(Array.isArray(r.data) ? r.data : []))
-            .catch(err => {
-                console.error('Students load failed:', err);
-            });
+            .catch(err => console.error('Students load failed:', err));
 
     const loadTimeSlots = () =>
         api.get('/admin/timeslots')
             .then(r => setTimeSlots(Array.isArray(r.data) ? r.data : []))
-            .catch(err => {
-                console.error('Timeslots load failed:', err);
-            });
+            .catch(err => console.error('Timeslots load failed:', err));
+
+    const loadAllBookings = () =>
+        api.get('/admin/bookings')
+            .then(r => setAllBookings(Array.isArray(r.data) ? r.data : []))
+            .catch(err => console.error('Bookings load failed:', err));
+
+    const loadRevenueData = () =>
+        api.get('/admin/revenue')
+            .then(r => setRevenueData(Array.isArray(r.data) ? r.data : []))
+            .catch(err => console.error('Revenue load failed:', err));
+
+    const loadDrivers = () =>
+        api.get('/admin/drivers')
+            .then(r => setDrivers(Array.isArray(r.data) ? r.data : []))
+            .catch(err => console.error('Drivers load failed:', err));
 
     const handleAddBus = async () => {
         const fd = new FormData();
@@ -189,7 +216,6 @@ export default function AdminDashboard() {
         try {
             const fareNum = Number(newFare);
             if (isNaN(fareNum) || fareNum < 0) return alert('Please enter a valid fare price.');
-
             await api.patch('/admin/fare', { flatFare: fareNum });
             setFare(fareNum);
             alert('Fare updated successfully!');
@@ -199,7 +225,30 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleAddDriver = async () => {
+        if (!driverForm.name || !driverForm.email || !driverForm.password) {
+            return setDriverMsg('All fields are required.');
+        }
+        try {
+            const r = await api.post('/admin/drivers', driverForm);
+            setDriverMsg(`✓ Driver "${r.data.driver?.name}" created successfully.`);
+            setDriverForm({ name: '', email: '', password: '' });
+            loadDrivers();
+        } catch (err) {
+            setDriverMsg(err.response?.data?.message || 'Failed to create driver.');
+        }
+        setTimeout(() => setDriverMsg(''), 4000);
+    };
+
     const navItems = NAV_ITEMS.filter(n => !n.superOnly || user?.role === 'superadmin');
+
+    // Filtered bookings
+    const filteredBookings = allBookings.filter(b => {
+        const q = bookingSearch.toLowerCase();
+        const matchSearch = !q || b.student_name?.toLowerCase().includes(q) || b.student_id?.toLowerCase().includes(q) || b.destination?.toLowerCase().includes(q) || b.qr_code_token?.toLowerCase().includes(q);
+        const matchStatus = !bookingStatusFilter || b.status === bookingStatusFilter;
+        return matchSearch && matchStatus;
+    });
 
     // Unique city names for filter
     const uniqueCities = [...new Set(timeSlots.map(s => s.destination))].sort();
@@ -522,12 +571,81 @@ export default function AdminDashboard() {
                     {/* ── Section 4: Bookings ── */}
                     {section === 'bookings' && (
                         <div className="space-y-6">
-                            <h1 className="font-display text-4xl text-[#131718]">ALL BOOKINGS</h1>
-                            <div className="bg-[#FFF6C6] rounded-2xl p-4 text-sm font-medium text-gray-600">
-                                Booking management table — search, filter, and verify passes using the backend data.
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[#FEC29F] mb-1">Admin View</p>
+                                <h1 className="font-display text-4xl text-[#131718]">ALL BOOKINGS</h1>
                             </div>
+
+                            {/* Search + Filter row */}
+                            <div className="flex flex-wrap gap-3">
+                                <input
+                                    value={bookingSearch}
+                                    onChange={e => setBookingSearch(e.target.value)}
+                                    placeholder="Search by name, student ID, destination, token…"
+                                    className="flex-1 min-w-[220px] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none"
+                                />
+                                <select value={bookingStatusFilter} onChange={e => setBookingStatusFilter(e.target.value)}
+                                    className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none bg-white">
+                                    <option value="">All Statuses</option>
+                                    <option value="active">Active</option>
+                                    <option value="used">Used</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                                <button onClick={() => exportCSV(filteredBookings, 'bookings.csv')}
+                                    className="flex items-center gap-2 bg-[#131718] text-white px-5 py-2.5 rounded-full text-xs font-semibold hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
+                                    <Download size={13} /> Export
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-3xl border border-gray-100 overflow-x-auto">
+                                <table className="w-full text-sm min-w-[900px]">
+                                    <thead className="bg-gray-50 border-b border-gray-100">
+                                        <tr>
+                                            {['#', 'Student', 'Route', 'Date', 'Departure', 'Bus', 'Fare', 'Status'].map(h => (
+                                                <th key={h} className="text-left px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {filteredBookings.map(b => (
+                                            <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-5 py-3 text-gray-400 font-mono text-xs">{b.id}</td>
+                                                <td className="px-5 py-3">
+                                                    <p className="font-semibold">{b.student_name || '—'}</p>
+                                                    <p className="text-xs text-gray-400">{b.student_id || b.student_email}</p>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <p className="font-medium text-xs">{b.origin?.split(',')[0]} → {b.destination}</p>
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500 text-xs">{b.booking_date ? new Date(b.booking_date).toLocaleDateString('en-IN') : '—'}</td>
+                                                <td className="px-5 py-3">
+                                                    <span className="bg-[#D1E6F6] text-[#131718] font-semibold px-2 py-1 rounded-full text-xs">
+                                                        {b.departure_time?.slice(0, 5)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500 font-mono text-xs">{b.bus_number || '—'}</td>
+                                                <td className="px-5 py-3 font-semibold text-xs">₹{b.fare_paid}</td>
+                                                <td className="px-5 py-3">
+                                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                                        b.status === 'active' ? 'bg-green-100 text-green-700' :
+                                                        b.status === 'used' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-red-100 text-red-600'
+                                                    }`}>{b.status}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {filteredBookings.length === 0 && (
+                                    <p className="text-center text-gray-400 py-10 text-sm">
+                                        {allBookings.length === 0 ? 'No bookings yet.' : 'No results match your search.'}
+                                    </p>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-400">Showing {filteredBookings.length} of {allBookings.length} bookings</p>
                         </div>
                     )}
+
 
                     {/* ── Section 5: Students ── */}
                     {section === 'students' && (
@@ -600,11 +718,41 @@ export default function AdminDashboard() {
                             <h1 className="font-display text-4xl text-[#131718]">REPORTS & EXPORTS</h1>
                             <div className="grid sm:grid-cols-3 gap-4">
                                 {[
-                                    { label: 'Daily Bookings', desc: 'All bookings with pass details', filename: 'bookings.csv', getData: () => [] },
-                                    { label: 'Revenue Report', desc: 'Total fares collected by date', filename: 'revenue.csv', getData: () => [] },
-                                    { label: 'Flagged Users', desc: 'Students with flagged accounts', filename: 'flagged.csv', getData: () => students.filter(s => !s.is_active) },
-                                ].map(({ label, desc, filename, getData }) => (
+                                    {
+                                        label: 'Daily Bookings',
+                                        desc: `All ${allBookings.length} bookings with pass details`,
+                                        filename: 'bookings.csv',
+                                        getData: () => allBookings.map(b => ({
+                                            ID: b.id, Student: b.student_name, StudentID: b.student_id,
+                                            Route: `${b.origin?.split(',')[0]} → ${b.destination}`,
+                                            Date: b.booking_date, Departure: b.departure_time?.slice(0, 5),
+                                            Bus: b.bus_number, Fare: b.fare_paid,
+                                            Payment: b.payment_method, Status: b.status
+                                        })),
+                                        bg: '#D1E6F6'
+                                    },
+                                    {
+                                        label: 'Revenue Report',
+                                        desc: `Daily aggregates (last 30 days)`,
+                                        filename: 'revenue.csv',
+                                        getData: () => revenueData.map(r => ({
+                                            Date: r.date, Bookings: r.bookings,
+                                            Revenue: `₹${r.revenue}`, Verified: r.verified, Active: r.active
+                                        })),
+                                        bg: '#FEC29F'
+                                    },
+                                    {
+                                        label: 'Flagged Users',
+                                        desc: 'Students with deactivated accounts',
+                                        filename: 'flagged.csv',
+                                        getData: () => students.filter(s => !s.is_active).map(s => ({
+                                            Name: s.name, StudentID: s.student_id, Email: s.email, Status: 'Inactive'
+                                        })),
+                                        bg: '#FFDAE4'
+                                    },
+                                ].map(({ label, desc, filename, getData, bg }) => (
                                     <div key={label} className="bg-white rounded-3xl p-6 border border-gray-100">
+                                        <div className="w-10 h-10 rounded-xl mb-3" style={{ backgroundColor: bg }} />
                                         <p className="font-display text-2xl mb-2">{label}</p>
                                         <p className="text-sm text-gray-400 mb-4">{desc}</p>
                                         <button onClick={() => exportCSV(getData(), filename)}
@@ -614,8 +762,42 @@ export default function AdminDashboard() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Revenue overview table */}
+                            {revenueData.length > 0 && (
+                                <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100">
+                                        <p className="font-semibold text-sm">Daily Revenue — Last 30 Days</p>
+                                    </div>
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                {['Date', 'Bookings', 'Revenue', 'Verified', 'Active'].map(h => (
+                                                    <th key={h} className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {revenueData.map((r, i) => (
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-3 font-medium">{r.date}</td>
+                                                    <td className="px-6 py-3 text-gray-500">{r.bookings}</td>
+                                                    <td className="px-6 py-3 font-semibold text-green-700">₹{Number(r.revenue).toFixed(0)}</td>
+                                                    <td className="px-6 py-3">
+                                                        <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">{r.verified}</span>
+                                                    </td>
+                                                    <td className="px-6 py-3">
+                                                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{r.active}</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
+
 
                     {/* ── Section 7: Notifications ── */}
                     {section === 'notifications' && (
@@ -665,6 +847,81 @@ export default function AdminDashboard() {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* ── Section: Drivers (Super Admin) ── */}
+                    {section === 'drivers' && user?.role === 'superadmin' && (
+                        <div className="space-y-6 max-w-4xl">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[#FEC29F] mb-1">Super Admin Only</p>
+                                <h1 className="font-display text-4xl text-[#131718]">DRIVER ACCOUNTS</h1>
+                            </div>
+
+                            {/* Create Driver Form */}
+                            <div className="bg-white rounded-3xl p-6 border border-gray-100 space-y-4">
+                                <h2 className="font-display text-2xl text-[#131718]">CREATE DRIVER ACCOUNT</h2>
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Driver Name</label>
+                                        <input value={driverForm.name} onChange={e => setDriverForm(f => ({ ...f, name: e.target.value }))}
+                                            placeholder="e.g. Rajesh K."
+                                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Email</label>
+                                        <input value={driverForm.email} onChange={e => setDriverForm(f => ({ ...f, email: e.target.value }))}
+                                            placeholder="driver@passgo.com" type="email"
+                                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Password</label>
+                                        <input value={driverForm.password} onChange={e => setDriverForm(f => ({ ...f, password: e.target.value }))}
+                                            placeholder="••••••••" type="password"
+                                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                    </div>
+                                </div>
+                                {driverMsg && (
+                                    <div className={`text-sm rounded-xl px-4 py-2.5 ${driverMsg.startsWith('✓') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                                        {driverMsg}
+                                    </div>
+                                )}
+                                <button onClick={handleAddDriver}
+                                    className="bg-[#131718] text-white px-6 py-3 rounded-full font-semibold text-sm hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
+                                    Create Driver Account
+                                </button>
+                            </div>
+
+                            {/* Drivers List */}
+                            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-gray-100">
+                                    <h3 className="font-semibold text-sm">Active Driver Terminal Accounts ({drivers.length})</h3>
+                                </div>
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b border-gray-100">
+                                        <tr>
+                                            {['Name', 'Email', 'Created At', 'Status'].map(h => (
+                                                <th key={h} className="text-left px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {drivers.map(d => (
+                                            <tr key={d.id} className="hover:bg-gray-50">
+                                                <td className="px-5 py-4 font-semibold">{d.name}</td>
+                                                <td className="px-5 py-4 text-gray-500 font-mono text-xs">{d.email}</td>
+                                                <td className="px-5 py-4 text-gray-400 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</td>
+                                                <td className="px-5 py-4">
+                                                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${d.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                        {d.is_active ? 'Active' : 'Disabled'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {drivers.length === 0 && <p className="text-center text-gray-400 py-10 text-sm">No driver accounts found. Create one above!</p>}
+                            </div>
                         </div>
                     )}
 
