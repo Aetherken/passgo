@@ -133,22 +133,47 @@ export const getMyBookings = async (req, res) => {
 };
 
 export const verifyBooking = async (req, res) => {
-    const { id } = req.params;
+    const rawId = req.params.id;
+    const token = (rawId || '').trim();
 
     try {
-        const result = await db.query('SELECT id, status FROM bookings WHERE qr_code_token = $1', [id]);
+        const result = await db.query(`
+            SELECT b.id, b.status, b.booking_date, b.fare_paid, b.qr_code_token,
+                   u.name as student_name, u.student_id,
+                   r.origin, c.name as destination, ts.departure_time, ts.arrival_time, bus.bus_number
+            FROM bookings b
+            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN time_slots ts ON b.time_slot_id = ts.id
+            LEFT JOIN routes r ON ts.route_id = r.id
+            LEFT JOIN cities c ON r.destination_id = c.id
+            LEFT JOIN buses bus ON ts.bus_id = bus.id
+            WHERE b.qr_code_token = $1 OR CAST(b.id AS TEXT) = $1
+        `, [token]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Ticket not found.' });
+            return res.status(404).json({ message: 'Ticket not found. Invalid pass QR code.' });
         }
 
-        if (result.rows[0].status !== 'active') {
-            return res.status(400).json({ message: `Ticket is already ${result.rows[0].status}.` });
+        const booking = result.rows[0];
+
+        if (booking.status !== 'active') {
+            return res.status(400).json({ 
+                message: `Pass has already been ${booking.status.toUpperCase()}! Cannot board again.`,
+                booking 
+            });
         }
 
-        await db.query("UPDATE bookings SET status = 'used' WHERE id = $1", [result.rows[0].id]);
-        res.status(200).json({ message: 'Ticket verified successfully.' });
+        await db.query("UPDATE bookings SET status = 'used' WHERE id = $1", [booking.id]);
+
+        const passengerInfo = booking.student_name ? `${booking.student_name}` : 'Student';
+        const routeInfo = booking.destination ? `(${booking.origin} → ${booking.destination})` : '';
+
+        return res.status(200).json({ 
+            message: `Ticket verified! Passenger: ${passengerInfo} ${routeInfo}`,
+            booking: { ...booking, status: 'used' }
+        });
     } catch (error) {
+        console.error('verifyBooking error:', error);
         res.status(500).json({ message: error.message });
     }
 };

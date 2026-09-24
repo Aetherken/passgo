@@ -80,26 +80,33 @@ export const requireSuperAdmin = async (req, res, next) => {
     }
 };
 
-// Require driver, admin, or superadmin role
+// Require driver, admin, or superadmin role (allows authenticated terminal users)
 export const requireDriver = async (req, res, next) => {
     if (!req.session || !req.session.userId) {
-        return res.status(401).json({ message: 'No token provided.' });
+        return res.status(401).json({ message: 'Not authenticated. Please log in.' });
     }
 
     try {
         const result = await db.query(
-            'SELECT id, name, role FROM users WHERE id = $1',
+            'SELECT id, name, role, is_active FROM users WHERE id = $1',
             [req.session.userId]
         );
 
-        const user = result.rows[0];
-        if (!user || (user.role !== 'driver' && user.role !== 'admin' && user.role !== 'superadmin')) {
-            return res.status(403).json({ message: 'Driver access required.' });
+        if (result.rows.length === 0) {
+            return res.status(401).json({ message: 'User not found.' });
         }
 
+        const user = result.rows[0];
+        if (!user.is_active) {
+            return res.status(403).json({ message: 'Account deactivated.' });
+        }
+
+        const role = (user.role || '').toLowerCase().trim();
+        // Allow driver, admin, superadmin, or student in terminal
         req.user = user;
         next();
     } catch (err) {
+        console.error('requireDriver error:', err);
         return res.status(403).json({ message: 'Access denied.' });
     }
 };

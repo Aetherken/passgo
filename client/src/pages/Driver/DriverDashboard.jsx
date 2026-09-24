@@ -49,6 +49,11 @@ export default function DriverDashboard() {
         return cleaned;
     };
 
+    const [totalBoarded, setTotalBoarded] = useState(42);
+    const today = new Date();
+    const dayNumber = today.getDate().toString().padStart(2, '0');
+    const monthYear = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
     const handleVerifyToken = async (e, directToken = null) => {
         if (e && e.preventDefault) e.preventDefault();
         const targetToken = cleanTokenString(directToken || token);
@@ -58,11 +63,18 @@ export default function DriverDashboard() {
         setResult(null);
         try {
             const res = await api.patch(`/bookings/${targetToken}/verify`);
-            setResult({ success: true, message: res.data.message });
+            setResult({
+                success: true,
+                message: res.data.message,
+                booking: res.data.booking
+            });
+            setTotalBoarded(count => count + 1);
             setRecentVerifications(prev => [{
                 token: targetToken,
                 time: new Date().toLocaleTimeString(),
-                success: true
+                success: true,
+                passenger: res.data.booking?.student_name,
+                destination: res.data.booking?.destination
             }, ...prev].slice(0, 5));
             setToken('');
         } catch (err) {
@@ -160,15 +172,42 @@ export default function DriverDashboard() {
                             </div>
                             <div>
                                 <h3 className={`font-display text-3xl mb-1 ${result.success ? 'text-green-700' : 'text-red-700'}`}>
-                                    {result.success ? 'SUCCESSFUL' : 'INVALID'}
+                                    {result.success ? 'PASS VERIFIED' : 'INVALID PASS'}
                                 </h3>
-                                <p className="text-gray-600 font-medium">{result.message}</p>
+                                <p className="text-gray-700 font-medium text-sm leading-relaxed">{result.message}</p>
+
+                                {result.booking && (
+                                    <div className="mt-5 p-5 bg-white rounded-2xl border border-green-200 text-left text-xs space-y-2 font-mono shadow-sm">
+                                        <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                            <span className="text-gray-400 uppercase tracking-wider text-[10px]">Passenger</span>
+                                            <span className="font-bold text-gray-800 text-sm">{result.booking.student_name || 'Student'}</span>
+                                        </div>
+                                        {result.booking.student_id && (
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">Student ID:</span>
+                                                <span className="font-bold text-gray-700">{result.booking.student_id}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Route:</span>
+                                            <span className="font-bold text-gray-700">{result.booking.origin} → {result.booking.destination}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Bus / Departure:</span>
+                                            <span className="font-bold text-gray-700">{result.booking.bus_number || 'Bus'} ({result.booking.departure_time?.slice(0, 5) || 'Today'})</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Pass Status:</span>
+                                            <span className="font-bold text-green-600 uppercase text-[10px] bg-green-100 px-2 py-0.5 rounded-full">Boarded (Used)</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <button
                                 onClick={() => setResult(null)}
-                                className="w-full bg-[#131718] text-white py-4 rounded-3xl font-bold uppercase tracking-widest text-sm"
+                                className="w-full bg-[#131718] text-white py-4 rounded-3xl font-bold uppercase tracking-widest text-sm hover:bg-[#FEC29F] hover:text-[#131718] transition-all"
                             >
-                                Back to Console
+                                Verify Next Pass
                             </button>
                         </div>
                     )}
@@ -178,13 +217,13 @@ export default function DriverDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/5 border border-white/10 rounded-[32px] p-6">
                         <Users className="text-[#D1E6F6] mb-3" size={24} />
-                        <p className="text-4xl font-display leading-none mb-1">42</p>
+                        <p className="text-4xl font-display leading-none mb-1">{totalBoarded}</p>
                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Boarded</p>
                     </div>
                     <div className="bg-white/5 border border-white/10 rounded-[32px] p-6">
                         <Calendar className="text-[#FFF6C6] mb-3" size={24} />
-                        <p className="text-4xl font-display leading-none mb-1">09</p>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">March 2026</p>
+                        <p className="text-4xl font-display leading-none mb-1">{dayNumber}</p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{monthYear}</p>
                     </div>
                 </div>
 
@@ -201,7 +240,9 @@ export default function DriverDashboard() {
                                 <div className="flex items-center gap-4">
                                     <div className={`w-1.5 h-1.5 rounded-full ${v.success ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`} />
                                     <div>
-                                        <p className="font-mono text-sm text-gray-300">{v.token.slice(0, 8)}...</p>
+                                        <p className="font-mono text-sm text-gray-300">
+                                            {v.passenger ? `${v.passenger} (${v.destination || 'Pass'})` : `${v.token.slice(0, 8)}...`}
+                                        </p>
                                         <p className="text-[10px] text-gray-500 uppercase font-bold">{v.time}</p>
                                     </div>
                                 </div>
