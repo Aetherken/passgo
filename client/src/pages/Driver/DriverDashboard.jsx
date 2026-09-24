@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
+import QrScannerModal from '../../components/QrScannerModal';
 import {
     QrCode,
     LogOut,
@@ -12,7 +13,8 @@ import {
     Loader2,
     Calendar,
     ChevronRight,
-    Search
+    Search,
+    Camera
 } from 'lucide-react';
 
 export default function DriverDashboard() {
@@ -21,7 +23,7 @@ export default function DriverDashboard() {
     const [token, setToken] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null); // { success: bool, message: string }
-    const [scanMode, setScanMode] = useState(false);
+    const [scannerOpen, setScannerOpen] = useState(false);
     const [recentVerifications, setRecentVerifications] = useState([]);
 
     useEffect(() => {
@@ -30,17 +32,35 @@ export default function DriverDashboard() {
         }
     }, [user, navigate]);
 
-    const handleVerifyToken = async (e) => {
-        if (e) e.preventDefault();
-        if (!token.trim()) return;
+    const cleanTokenString = (raw) => {
+        if (!raw) return '';
+        let cleaned = String(raw).trim();
+        try {
+            if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+                const url = new URL(cleaned);
+                const queryToken = url.searchParams.get('token') || url.searchParams.get('id');
+                if (queryToken) return queryToken;
+                const parts = url.pathname.split('/').filter(Boolean);
+                if (parts.length > 0) return parts[parts.length - 1];
+            }
+        } catch {
+            // keep cleaned string
+        }
+        return cleaned;
+    };
+
+    const handleVerifyToken = async (e, directToken = null) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const targetToken = cleanTokenString(directToken || token);
+        if (!targetToken) return;
 
         setLoading(true);
         setResult(null);
         try {
-            const res = await api.patch(`/bookings/${token.trim()}/verify`);
+            const res = await api.patch(`/bookings/${targetToken}/verify`);
             setResult({ success: true, message: res.data.message });
             setRecentVerifications(prev => [{
-                token: token.trim(),
+                token: targetToken,
                 time: new Date().toLocaleTimeString(),
                 success: true
             }, ...prev].slice(0, 5));
@@ -50,6 +70,11 @@ export default function DriverDashboard() {
                 success: false,
                 message: err.response?.data?.message || 'Verification failed.'
             });
+            setRecentVerifications(prev => [{
+                token: targetToken,
+                time: new Date().toLocaleTimeString(),
+                success: false
+            }, ...prev].slice(0, 5));
         } finally {
             setLoading(false);
         }
@@ -118,10 +143,14 @@ export default function DriverDashboard() {
                             </form>
 
                             <button
-                                onClick={() => alert('Scanner requires secure connection (HTTPS) and a camera. Please use token input for now.')}
-                                className="w-full py-5 rounded-3xl border-2 border-dashed border-gray-200 text-gray-400 font-semibold text-sm hover:border-[#131718] hover:text-[#131718] transition-all flex items-center justify-center gap-3"
+                                type="button"
+                                onClick={() => setScannerOpen(true)}
+                                className="w-full py-5 rounded-3xl border-2 border-dashed border-[#131718]/25 hover:border-[#131718] bg-gray-50 hover:bg-[#FEC29F]/15 text-[#131718] font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-sm group"
                             >
-                                <QrCode size={18} /> Open QR Scanner
+                                <div className="w-8 h-8 rounded-xl bg-[#131718] text-white group-hover:bg-[#FEC29F] group-hover:text-[#131718] flex items-center justify-center transition-colors">
+                                    <Camera size={18} />
+                                </div>
+                                <span>Open Camera QR Scanner</span>
                             </button>
                         </div>
                     ) : (
@@ -191,6 +220,15 @@ export default function DriverDashboard() {
 
             {/* Bottom Nav Spacer */}
             <div className="h-20" />
+
+            {/* QR Camera Scanner Modal */}
+            <QrScannerModal
+                isOpen={scannerOpen}
+                onClose={() => setScannerOpen(false)}
+                onScanSuccess={(scannedText) => {
+                    handleVerifyToken(null, scannedText);
+                }}
+            />
         </div>
     );
 }
