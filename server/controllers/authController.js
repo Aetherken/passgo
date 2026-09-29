@@ -56,10 +56,13 @@ export const register = async (req, res) => {
       </div>
     `;
 
-        // Send verification email (non-blocking so API doesn't hang on slow SMTP)
-        sendEmail({ to: email.toLowerCase().trim(), subject: `PassGo Email Verification Code: ${verificationToken}`, html: emailHtml })
-            .then(ok => console.log(`[AUTH] Verification email to ${email}: ${ok ? 'SENT' : 'FAILED'}`))
-            .catch(err => console.error('[AUTH] Verification email error:', err.message));
+        // Send verification email (awaited so email is transmitted before responding)
+        try {
+            const sent = await sendEmail({ to: email.toLowerCase().trim(), subject: `PassGo Email Verification Code: ${verificationToken}`, html: emailHtml });
+            console.log(`[AUTH] Verification email to ${email}: ${sent ? 'SENT' : 'FAILED'}`);
+        } catch (mailErr) {
+            console.error('[AUTH] Verification email exception:', mailErr.message);
+        }
 
         res.status(201).json({
             message: 'Registration successful. Verification code sent to your email.',
@@ -236,9 +239,12 @@ export const resendVerification = async (req, res) => {
       </div>
     `;
 
-        sendEmail({ to: user.email, subject: `New PassGo Verification Code: ${newCode}`, html: emailHtml })
-            .then(ok => console.log(`[AUTH] Resend verification to ${user.email}: ${ok ? 'SENT' : 'FAILED'}`))
-            .catch(err => console.error('[AUTH] Resend verification error:', err.message));
+        try {
+            const sent = await sendEmail({ to: user.email, subject: `New PassGo Verification Code: ${newCode}`, html: emailHtml });
+            console.log(`[AUTH] Resend verification to ${user.email}: ${sent ? 'SENT' : 'FAILED'}`);
+        } catch (mailErr) {
+            console.error('[AUTH] Resend verification exception:', mailErr.message);
+        }
 
         res.status(200).json({ message: 'A new verification code has been sent to your email.' });
 
