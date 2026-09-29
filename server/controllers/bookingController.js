@@ -43,7 +43,11 @@ export const getSlotsByRoute = async (req, res) => {
 
 export const createBooking = async (req, res) => {
     const { timeSlotId, bookingDate, paymentMethod } = req.body;
-    const userId = req.session.userId;
+    const userId = req.user?.id || req.session?.userId;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated. Please log in.' });
+    }
 
     try {
         const slotResult = await db.query('SELECT available_seats FROM time_slots WHERE id = $1', [timeSlotId]);
@@ -116,7 +120,7 @@ export const createBooking = async (req, res) => {
 };
 
 export const getMyBookings = async (req, res) => {
-    const rawUserId = req.session?.userId;
+    const rawUserId = req.user?.id || req.session?.userId;
     if (!rawUserId) {
         return res.status(401).json({ message: 'Not authenticated.' });
     }

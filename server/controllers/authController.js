@@ -114,14 +114,15 @@ export const logout = (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-    if (!req.session || !req.session.userId) {
+    const userId = req.user?.id || req.session?.userId;
+    if (!userId) {
         return res.status(401).json({ message: 'Not authenticated.' });
     }
 
     try {
         const result = await db.query(
-            'SELECT id, name, student_id, email, phone, role, is_active FROM users WHERE id = $1',
-            [req.session.userId]
+            'SELECT id, name, student_id, email, phone, role, is_active FROM users WHERE id = $1 OR CAST(id AS TEXT) = CAST($1 AS TEXT)',
+            [userId]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'User not found.' });

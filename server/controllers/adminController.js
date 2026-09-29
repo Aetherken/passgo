@@ -162,7 +162,7 @@ export const toggleStudentState = async (req, res) => {
 export const flagStudent = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
-    const adminId = req.session.userId;
+    const adminId = req.user?.id || req.session?.userId;
 
     try {
         await db.query('UPDATE users SET is_active = false WHERE id = $1', [id]);
@@ -206,7 +206,7 @@ export const deleteStudent = async (req, res) => {
 // ---- NOTIFICATIONS ----
 export const sendNotification = async (req, res) => {
     const { title, message, type } = req.body;
-    const adminId = req.session.userId;
+    const adminId = req.user?.id || req.session?.userId;
 
     try {
         await db.query(
