@@ -30,7 +30,6 @@ const getTransporter = () => {
 
 export const sendEmail = async ({ to, bcc, subject, html }) => {
     try {
-        // Ensure latest env variables are reloaded
         dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
         dotenv.config({ override: true });
 
@@ -42,14 +41,15 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
             return false;
         }
 
-        console.log(`[MAIL] Attempting to send email to ${to} using user: ${user}...`);
+        console.log(`[MAIL] Attempting to send email to ${to} from ${user}...`);
         const transporter = getTransporter();
 
-        const fromAddress = process.env.EMAIL_FROM || `PassGo <${user}>`;
+        const rawFrom = process.env.EMAIL_FROM ? process.env.EMAIL_FROM.trim().replace(/^["']|["']$/g, '') : '';
+        const fromAddress = rawFrom || `PassGo <${user}>`;
 
         const mailOptions = {
             from: fromAddress,
-            to,
+            to: (to || '').trim(),
             subject,
             html,
         };
@@ -65,7 +65,7 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
         console.error(`[MAIL] ✗ Failed to send email to ${to}:`, error.message);
         if (error.message.includes('535') || error.message.includes('Username and Password not accepted')) {
             console.error('  👉 [MAIL DIAGNOSTIC] Gmail SMTP Authentication Failed (535 Bad Credentials).');
-            console.error('  👉 SOLUTION: Check EMAIL_PASS in server/.env & Render Environment Variables.');
+            console.error('  👉 SOLUTION: Check EMAIL_PASS in server/.env & Cloud Environment Variables.');
         }
         return false;
     }
