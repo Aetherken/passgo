@@ -17,6 +17,7 @@ const sendViaResend = async ({ to, subject, html }) => {
 
     try {
         console.log(`[MAIL-RESEND] Sending email via Resend HTTPS API to ${to}...`);
+        const resendFrom = process.env.RESEND_FROM || 'PassGo <onboarding@resend.dev>';
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -24,7 +25,7 @@ const sendViaResend = async ({ to, subject, html }) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: process.env.EMAIL_FROM ? process.env.EMAIL_FROM.replace(/^["']|["']$/g, '') : 'PassGo <onboarding@resend.dev>',
+                from: resendFrom,
                 to: [to.trim()],
                 subject,
                 html
