@@ -6,7 +6,7 @@ import {
     sendNotification, getDashboardStats,
     getTimeSlots, addTimeSlot, updateTimeSlot,
     getAllBookings, getRevenueData,
-    getDrivers, addDriver
+    getDrivers, addDriver, deleteCity, deleteRoute
 } from '../controllers/adminController.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import db from '../config/db.js';
@@ -88,6 +88,9 @@ router.post('/cities', requireSuperAdmin, async (req, res) => {
         res.status(500).json({ message: 'Failed to insert city and route.' });
     }
 });
+
+router.delete('/cities/:id', requireSuperAdmin, deleteCity);
+router.delete('/routes/:id', requireSuperAdmin, deleteRoute);
 
 router.post('/routes', requireSuperAdmin, async (req, res) => {
     try {

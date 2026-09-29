@@ -194,7 +194,12 @@ export default function Dashboard() {
                                 </div>
                             ))}
                         </div>
-                        {slots.length === 0 && <p className="text-gray-400 text-sm">No slots available for this route.</p>}
+                        {slots.length === 0 && (
+                            <div className="bg-[#FFF6C6] border-2 border-[#FEC29F] rounded-3xl p-6 text-[#131718]">
+                                <p className="font-display text-2xl mb-1">BUS NOT AVAILABLE AT THIS TIME</p>
+                                <p className="text-sm font-medium text-gray-700">Arriving soon. Please check back later or select another route.</p>
+                            </div>
+                        )}
 
                         <div className="flex gap-3">
                             <button onClick={() => setStep(0)}

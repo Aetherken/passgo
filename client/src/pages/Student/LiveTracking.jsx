@@ -13,16 +13,16 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// VJEC Chemberi exact coordinates (12.1009° N, 75.6022° E)
-const VJEC = { lat: 12.1009, lng: 75.6022 };
+// VJEC Chemberi exact coordinates at Chelimparamba (12.0965° N, 75.5685° E)
+const VJEC = { lat: 12.0965, lng: 75.5685 };
 
-// Real bus positions along routes radiating from VJEC Chemberi
+// Real bus positions along routes radiating directly from Chelimparamba VJEC
 const MOCK_BUSES = [
     { id: 1, busNumber: 'KL-58-A-1111', route: 'VJEC → Kannur', status: 'On Route', lat: 12.0372, lng: 75.5186, eta: '22 min', speed: '45 km/h', nextStop: 'Sreekandapuram', passengers: 32 },
     { id: 2, busNumber: 'KL-58-A-2222', route: 'VJEC → Thalassery', status: 'On Route', lat: 11.9840, lng: 75.5450, eta: '35 min', speed: '38 km/h', nextStop: 'Irikkur', passengers: 28 },
     { id: 3, busNumber: 'KL-58-A-3333', route: 'VJEC → Payyanur', status: 'At Stop', lat: 12.0950, lng: 75.4200, eta: '10 min', speed: '0 km/h', nextStop: 'Tadikkadavu', passengers: 45 },
     { id: 4, busNumber: 'KL-58-B-4444', route: 'VJEC → Iritty', status: 'On Route', lat: 12.0450, lng: 75.6400, eta: '15 min', speed: '52 km/h', nextStop: 'Payyavoor', passengers: 18 },
-    { id: 5, busNumber: 'KL-58-B-5555', route: 'VJEC → Mattannur', status: 'Departing', lat: 12.0900, lng: 75.5900, eta: '3 min', speed: '12 km/h', nextStop: 'Chemperi Gate', passengers: 40 },
+    { id: 5, busNumber: 'KL-58-B-5555', route: 'VJEC → Mattannur', status: 'Departing', lat: 12.0965, lng: 75.5685, eta: '3 min', speed: '12 km/h', nextStop: 'Chelimparamba Gate', passengers: 40 },
     { id: 6, busNumber: 'KL-58-B-6666', route: 'VJEC → Taliparamba', status: 'On Route', lat: 12.0650, lng: 75.4800, eta: '20 min', speed: '50 km/h', nextStop: 'Karimbam', passengers: 22 },
 ];
 

@@ -71,6 +71,9 @@ export default function AdminDashboard() {
     const [driverForm, setDriverForm] = useState({ name: '', email: '', password: '' });
     const [driverMsg, setDriverMsg] = useState('');
 
+    // Cities List
+    const [allCities, setAllCities] = useState([]);
+
     const [fare, setFare] = useState(25);
 
     const [newFare, setNewFare] = useState(25);
@@ -87,6 +90,7 @@ export default function AdminDashboard() {
         loadAllBookings();
         loadRevenueData();
         loadDrivers();
+        loadCities();
         api.get('/fare')
             .then(r => {
                 setFare(r.data.fare);
@@ -94,6 +98,11 @@ export default function AdminDashboard() {
             })
             .catch(err => console.error('Fare load failed:', err));
     }, [user]);
+
+    const loadCities = () =>
+        api.get('/cities')
+            .then(r => setAllCities(Array.isArray(r.data) ? r.data : []))
+            .catch(err => console.error('Cities load failed:', err));
 
     const loadStats = () =>
         api.get(`/admin/stats`)
@@ -409,10 +418,9 @@ export default function AdminDashboard() {
                                                 <select value={busForm.cityId} onChange={e => setBusForm(f => ({ ...f, cityId: e.target.value }))}
                                                     className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none bg-white">
                                                     <option value="">Select Destination City (Optional)</option>
-                                                    {uniqueCities.map(c => {
-                                                        const slotMatch = timeSlots.find(s => s.destination === c);
-                                                        return <option key={c} value={slotMatch ? slotMatch.route_id : c}>{c}</option>;
-                                                    })}
+                                                    {allCities.map(c => (
+                                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                                    ))}
                                                 </select>
                                                 <p className="text-[11px] text-gray-400 mt-1">Assigning a city automatically makes this bus bookable for that route!</p>
                                             </div>
@@ -981,21 +989,73 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* City & Route Management */}
-                            <div className="bg-white rounded-3xl p-6 border border-gray-100">
-                                <p className="font-display text-2xl mb-4">CITY & ROUTE MANAGEMENT</p>
-                                <div className="space-y-3">
-                                    <div className="flex gap-3">
-                                        <input placeholder="City Name" id="cityNameInput"
-                                            className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none" />
-                                        <button onClick={async () => {
-                                            const name = document.getElementById('cityNameInput').value;
-                                            if (!name) return;
-                                            await api.post('/admin/cities', { name, description: '' });
-                                            alert('City added!');
-                                        }} className="bg-[#131718] text-white px-5 py-3 rounded-full text-sm font-semibold whitespace-nowrap">
-                                            + Add City
-                                        </button>
-                                    </div>
+                            <div className="bg-white rounded-3xl p-6 border border-gray-100 space-y-6">
+                                <div>
+                                    <p className="font-display text-2xl mb-1">CITY & ROUTE MANAGEMENT</p>
+                                    <p className="text-xs text-gray-400">Add or delete campus route destinations.</p>
+                                </div>
+
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <input placeholder="City Name (e.g. Alakode)" id="cityNameInput"
+                                        className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                    <input placeholder="Distance in KM (e.g. 35)" type="number" id="cityDistInput"
+                                        className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                    <input placeholder="Est. Duration (mins)" type="number" id="cityDurInput"
+                                        className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#131718] focus:outline-none" />
+                                </div>
+                                <button onClick={async () => {
+                                    const nameEl = document.getElementById('cityNameInput');
+                                    const distEl = document.getElementById('cityDistInput');
+                                    const durEl = document.getElementById('cityDurInput');
+                                    if (!nameEl.value.trim()) return alert('Please enter a city name.');
+                                    try {
+                                        await api.post('/admin/cities', {
+                                            name: nameEl.value.trim(),
+                                            distanceKm: distEl.value ? Number(distEl.value) : 35,
+                                            durationMins: durEl.value ? Number(durEl.value) : 60
+                                        });
+                                        nameEl.value = ''; distEl.value = ''; durEl.value = '';
+                                        loadCities(); loadTimeSlots();
+                                        alert('City and Route added successfully!');
+                                    } catch (err) {
+                                        alert('Failed to add city: ' + (err.response?.data?.message || err.message));
+                                    }
+                                }} className="bg-[#131718] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#FEC29F] hover:text-[#131718] transition-all">
+                                    + Add City & Route
+                                </button>
+
+                                {/* City List Table */}
+                                <div className="border border-gray-100 rounded-2xl overflow-hidden mt-4">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-100">
+                                            <tr>
+                                                {['City Name', 'Route Origin', 'Action'].map(h => (
+                                                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {allCities.map(c => (
+                                                <tr key={c.id} className="hover:bg-gray-50">
+                                                    <td className="px-5 py-3 font-semibold">{c.name}</td>
+                                                    <td className="px-5 py-3 text-xs text-gray-400">from Vimal Jyothi Engineering College</td>
+                                                    <td className="px-5 py-3">
+                                                        <button onClick={async () => {
+                                                            if (!confirm(`Delete city "${c.name}" and its associated routes?`)) return;
+                                                            try {
+                                                                await api.delete(`/admin/cities/${c.id}`);
+                                                                loadCities(); loadTimeSlots();
+                                                            } catch (err) {
+                                                                alert('Failed to delete city.');
+                                                            }
+                                                        }} className="text-red-400 hover:text-red-600 transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>

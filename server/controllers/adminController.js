@@ -80,6 +80,26 @@ export const deleteBus = async (req, res) => {
     }
 };
 
+export const deleteCity = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM cities WHERE id = $1', [id]);
+        res.status(200).json({ message: 'City and linked route deleted.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const deleteRoute = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM routes WHERE id = $1', [id]);
+        res.status(200).json({ message: 'Route deleted.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // ---- TIME SLOT MANAGEMENT ----
 export const getTimeSlots = async (req, res) => {
     try {

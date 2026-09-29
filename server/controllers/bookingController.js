@@ -114,20 +114,23 @@ export const getMyBookings = async (req, res) => {
     const userId = req.session.userId;
     try {
         const result = await db.query(`
-            SELECT b.id, b.booking_date, b.status, b.fare_paid, b.qr_code_token,
+            SELECT b.id, b.booking_date, b.status, b.fare_paid, b.qr_code_token, b.created_at,
                    ts.departure_time, ts.arrival_time,
-                   r.origin, c.name as destination,
-                   bus.bus_number, bus.operator_name
+                   COALESCE(r.origin, 'Vimal Jyothi Engineering College') as origin,
+                   COALESCE(c.name, 'Destination') as destination,
+                   COALESCE(bus.bus_number, 'VJEC Bus') as bus_number,
+                   COALESCE(bus.operator_name, 'VJEC Transport') as operator_name
             FROM bookings b
-            JOIN time_slots ts ON b.time_slot_id = ts.id
-            JOIN routes r ON ts.route_id = r.id
-            JOIN cities c ON r.destination_id = c.id
-            JOIN buses bus ON ts.bus_id = bus.id
+            LEFT JOIN time_slots ts ON b.time_slot_id = ts.id
+            LEFT JOIN routes r ON ts.route_id = r.id
+            LEFT JOIN cities c ON r.destination_id = c.id
+            LEFT JOIN buses bus ON ts.bus_id = bus.id
             WHERE b.user_id = $1
             ORDER BY b.booking_date DESC, b.created_at DESC
         `, [userId]);
         res.status(200).json(result.rows);
     } catch (error) {
+        console.error('getMyBookings error:', error);
         res.status(500).json({ message: error.message });
     }
 };
