@@ -22,6 +22,9 @@ const getTransporter = () => {
             user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
             pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
         },
+        connectionTimeout: 8000, // 8s connection timeout
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
         tls: {
             rejectUnauthorized: false
         }
@@ -58,7 +61,13 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
             mailOptions.bcc = bcc;
         }
 
-        const info = await transporter.sendMail(mailOptions);
+        // Add 10s promise race safety timeout
+        const mailPromise = transporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('SMTP Connection Timeout (10s limit exceeded)')), 10000)
+        );
+
+        const info = await Promise.race([mailPromise, timeoutPromise]);
         console.log(`[MAIL] ✓ Email sent successfully to ${to}! MessageId: ${info.messageId}`);
         return true;
     } catch (error) {
