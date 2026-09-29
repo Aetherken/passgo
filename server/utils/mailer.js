@@ -6,9 +6,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Explicitly resolve .env from server directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-dotenv.config();
+// Explicitly resolve .env from server directory with override: true
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+dotenv.config({ override: true });
 
 const getTransporter = () => {
     const port = Number(process.env.EMAIL_PORT) || 587;
@@ -30,9 +30,9 @@ const getTransporter = () => {
 
 export const sendEmail = async ({ to, bcc, subject, html }) => {
     try {
-        // Ensure env variables are re-checked
-        dotenv.config({ path: path.resolve(__dirname, '../.env') });
-        dotenv.config();
+        // Ensure latest env variables are reloaded
+        dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+        dotenv.config({ override: true });
 
         const user = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '';
         const pass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
@@ -42,7 +42,7 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
             return false;
         }
 
-        console.log(`[MAIL] Attempting to send email to ${to}...`);
+        console.log(`[MAIL] Attempting to send email to ${to} using user: ${user}...`);
         const transporter = getTransporter();
 
         const fromAddress = process.env.EMAIL_FROM || `PassGo <${user}>`;
@@ -65,7 +65,7 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
         console.error(`[MAIL] ✗ Failed to send email to ${to}:`, error.message);
         if (error.message.includes('535') || error.message.includes('Username and Password not accepted')) {
             console.error('  👉 [MAIL DIAGNOSTIC] Gmail SMTP Authentication Failed (535 Bad Credentials).');
-            console.error('  👉 SOLUTION: Generate a new 16-character App Password at https://myaccount.google.com/apppasswords and set EMAIL_PASS in server/.env & Render Environment Variables.');
+            console.error('  👉 SOLUTION: Check EMAIL_PASS in server/.env & Render Environment Variables.');
         }
         return false;
     }
