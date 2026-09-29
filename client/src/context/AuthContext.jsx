@@ -15,11 +15,13 @@ export const AuthProvider = ({ children }) => {
         setUser(response.data.user);
         setRole(response.data.user.role);
         localStorage.setItem("role", response.data.user.role);
+        localStorage.setItem("passgo_user", JSON.stringify(response.data.user));
       }
     } catch (err) {
       setUser(null);
       setRole(null);
       localStorage.removeItem("role");
+      localStorage.removeItem("passgo_user");
     } finally {
       setLoading(false);
     }
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout failed:', err);
     } finally {
       localStorage.removeItem("role");
+      localStorage.removeItem("passgo_user");
       setUser(null);
       setRole(null);
     }
