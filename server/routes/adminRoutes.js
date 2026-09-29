@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import {
     getBuses, addBus, updateBus, deleteBus,
-    getStudents, toggleStudentState, flagStudent,
+    getStudents, toggleStudentState, flagStudent, deleteStudent,
     sendNotification, getDashboardStats,
     getTimeSlots, addTimeSlot, updateTimeSlot,
     getAllBookings, getRevenueData,
@@ -62,6 +62,7 @@ router.post('/drivers', requireSuperAdmin, addDriver);
 router.get('/students', getStudents);
 router.patch('/students/:id/toggle', toggleStudentState);
 router.post('/students/:id/flag', flagStudent);
+router.delete('/students/:id', deleteStudent);
 
 // Notifications & Comm
 router.post('/notifications', sendNotification);

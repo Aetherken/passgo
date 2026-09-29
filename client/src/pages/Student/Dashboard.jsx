@@ -299,8 +299,8 @@ export default function Dashboard() {
                             </div>
 
                             <div className="space-y-3 text-sm mb-6">
-                                <div className="flex justify-between"><span className="text-gray-400">Name</span><span>{user?.name}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Student ID</span><span>{user?.student_id || 'N/A'}</span></div>
+                                <div className="flex justify-between"><span className="text-gray-400">Name</span><span className="font-semibold">{bookingResult.passengerName || user?.name || 'Student'}</span></div>
+                                <div className="flex justify-between"><span className="text-gray-400">Student ID</span><span className="font-mono text-xs text-[#FEC29F] font-bold">{bookingResult.studentId || user?.student_id || 'N/A'}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-400">Route</span><span>{selectedRoute?.destination}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-400">Departure</span><span>{selectedSlot?.departure_time?.slice(0, 5)}</span></div>
                                 <div className="flex justify-between"><span className="text-gray-400">Bus</span><span>{selectedSlot?.bus_number}</span></div>

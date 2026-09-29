@@ -190,6 +190,19 @@ export const flagStudent = async (req, res) => {
     }
 };
 
+export const deleteStudent = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM bookings WHERE user_id = $1', [id]);
+        await db.query('DELETE FROM flagged_users WHERE user_id = $1', [id]);
+        await db.query('DELETE FROM users WHERE id = $1 AND role = $2', [id, 'student']);
+        res.status(200).json({ message: 'Student account deleted successfully.' });
+    } catch (error) {
+        console.error('deleteStudent error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // ---- NOTIFICATIONS ----
 export const sendNotification = async (req, res) => {
     const { title, message, type } = req.body;

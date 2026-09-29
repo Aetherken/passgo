@@ -8,7 +8,7 @@ export const requireAuth = async (req, res, next) => {
 
     try {
         const result = await db.query(
-            'SELECT id, name, role, is_active FROM users WHERE id = $1',
+            'SELECT id, name, student_id, email, role, is_active FROM users WHERE id = $1',
             [req.session.userId]
         );
 

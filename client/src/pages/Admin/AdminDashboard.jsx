@@ -203,6 +203,18 @@ export default function AdminDashboard() {
         setFlagModal(null); setFlagReason(''); loadStudents();
     };
 
+    const handleDeleteStudent = async (id, name) => {
+        if (window.confirm(`Are you sure you want to permanently delete student "${name || 'User'}"? This will remove all their bookings and account records.`)) {
+            try {
+                await api.delete(`/admin/students/${id}`);
+                loadStudents();
+            } catch (err) {
+                console.error('Delete student fail:', err);
+                alert(err.response?.data?.message || 'Failed to delete student.');
+            }
+        }
+    };
+
     const handleSendNotif = async () => {
         await api.post('/admin/notifications', notifForm);
         setSentNotifs(n => [{ ...notifForm, sentAt: new Date().toLocaleString() }, ...n]);
@@ -719,6 +731,10 @@ export default function AdminDashboard() {
                                                         <button onClick={() => { setFlagModal(s.id); setFlagReason(''); }}
                                                             className="text-xs px-3 py-1.5 rounded-full font-semibold bg-red-100 hover:bg-red-200 text-red-600 transition-all flex items-center gap-1">
                                                             <AlertTriangle size={12} /> Flag
+                                                        </button>
+                                                        <button onClick={() => handleDeleteStudent(s.id, s.name)}
+                                                            className="text-xs px-3 py-1.5 rounded-full font-semibold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1 shadow-sm">
+                                                            <Trash2 size={12} /> Delete
                                                         </button>
                                                     </div>
                                                 </td>

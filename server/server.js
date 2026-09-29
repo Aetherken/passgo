@@ -11,6 +11,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import db from './config/db.js';
 import { getCities, getRoutes, getSlotsByRoute, getFare } from './controllers/bookingController.js';
+import { getBuses, getTimeSlots } from './controllers/adminController.js';
 
 dotenv.config();
 
@@ -85,6 +86,8 @@ app.get('/api/cities', getCities);
 app.get('/api/routes', getRoutes);
 app.get('/api/routes/:id/slots', getSlotsByRoute);
 app.get('/api/fare', getFare);
+app.get('/api/buses', getBuses);
+app.get('/api/timeslots', getTimeSlots);
 
 // Standard API Routes
 app.use('/api/auth', authRoutes);

@@ -65,8 +65,8 @@ export const createBooking = async (req, res) => {
         // Decrement seats
         await db.query('UPDATE time_slots SET available_seats = available_seats - 1 WHERE id = $1', [timeSlotId]);
 
-        // Fetch user and route info for email
-        const userResult = await db.query('SELECT name, email FROM users WHERE id = $1', [userId]);
+        // Fetch user and route info for email & response
+        const userResult = await db.query('SELECT name, student_id, email FROM users WHERE id = $1', [userId]);
         const user = userResult.rows[0];
 
         const routeResult = await db.query(`
@@ -82,26 +82,31 @@ export const createBooking = async (req, res) => {
         const emailHtml = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>Your PassGo Ticket is Confirmed!</h2>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${user?.name || 'Student'},</p>
         <ul>
-          <li><strong>From:</strong> ${routeDetails.origin}</li>
-          <li><strong>To:</strong> ${routeDetails.destination}</li>
+          <li><strong>Student ID:</strong> ${user?.student_id || 'N/A'}</li>
+          <li><strong>From:</strong> ${routeDetails?.origin || 'VJEC'}</li>
+          <li><strong>To:</strong> ${routeDetails?.destination || 'Destination'}</li>
           <li><strong>Date:</strong> ${bookingDate}</li>
-          <li><strong>Time:</strong> ${routeDetails.departure_time} - ${routeDetails.arrival_time}</li>
-          <li><strong>Bus:</strong> ${routeDetails.bus_number}</li>
+          <li><strong>Time:</strong> ${routeDetails?.departure_time || ''} - ${routeDetails?.arrival_time || ''}</li>
+          <li><strong>Bus:</strong> ${routeDetails?.bus_number || ''}</li>
           <li><strong>Fare Paid:</strong> ₹${farePaid} (${paymentMethod.toUpperCase()})</li>
         </ul>
         <p>Your unique ticket ID is: <strong>${qrToken}</strong></p>
         <p>Have a great trip!</p>
       </div>
     `;
-        // Fire and forget email to avoid slowing down the response
-        sendEmail({ to: user.email, subject: 'PassGo Booking Confirmation', html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
+        // Send email
+        if (user?.email) {
+            sendEmail({ to: user.email, subject: 'PassGo Booking Confirmation', html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
+        }
 
         return res.status(201).json({
             message: 'Booking successful',
             bookingId: bookingResult.rows[0].id,
-            qrToken
+            qrToken,
+            passengerName: user?.name || 'Student',
+            studentId: user?.student_id || 'N/A'
         });
 
     } catch (error) {
@@ -111,7 +116,11 @@ export const createBooking = async (req, res) => {
 };
 
 export const getMyBookings = async (req, res) => {
-    const userId = req.session.userId;
+    const rawUserId = req.session?.userId;
+    if (!rawUserId) {
+        return res.status(401).json({ message: 'Not authenticated.' });
+    }
+
     try {
         const result = await db.query(`
             SELECT b.id, b.booking_date, b.status, b.fare_paid, b.qr_code_token, b.created_at,
@@ -119,15 +128,18 @@ export const getMyBookings = async (req, res) => {
                    COALESCE(r.origin, 'Vimal Jyothi Engineering College') as origin,
                    COALESCE(c.name, 'Destination') as destination,
                    COALESCE(bus.bus_number, 'VJEC Bus') as bus_number,
-                   COALESCE(bus.operator_name, 'VJEC Transport') as operator_name
+                   COALESCE(bus.operator_name, 'VJEC Transport') as operator_name,
+                   COALESCE(u.name, 'Student') as student_name,
+                   COALESCE(u.student_id, 'N/A') as student_id
             FROM bookings b
+            LEFT JOIN users u ON b.user_id = u.id
             LEFT JOIN time_slots ts ON b.time_slot_id = ts.id
             LEFT JOIN routes r ON ts.route_id = r.id
             LEFT JOIN cities c ON r.destination_id = c.id
             LEFT JOIN buses bus ON ts.bus_id = bus.id
-            WHERE b.user_id = $1
-            ORDER BY b.booking_date DESC, b.created_at DESC
-        `, [userId]);
+            WHERE b.user_id = $1 OR CAST(b.user_id AS TEXT) = CAST($1 AS TEXT)
+            ORDER BY b.created_at DESC, b.id DESC
+        `, [rawUserId]);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('getMyBookings error:', error);
