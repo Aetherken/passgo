@@ -252,22 +252,36 @@ export const sendNotification = async (req, res) => {
       </div>
     `;
 
+        let emailsSent = 0;
+        let emailsFailed = 0;
+
         if (studentEmails.length > 0) {
             for (const email of studentEmails) {
-                sendEmail({ to: email, subject: `PassGo Update: ${title}`, html: emailHtml })
-                    .catch(err => console.error(`[NOTIF-MAIL] Failed to notify ${email}:`, err.message));
+                try {
+                    const ok = await sendEmail({ to: email, subject: `PassGo Update: ${title}`, html: emailHtml });
+                    if (ok) emailsSent++;
+                    else emailsFailed++;
+                } catch (err) {
+                    emailsFailed++;
+                    console.error(`[NOTIF-MAIL] Failed to notify ${email}:`, err.message);
+                }
             }
         }
 
+        console.log(`[NOTIF] Notification "${title}" — ${emailsSent} sent, ${emailsFailed} failed out of ${studentEmails.length} students`);
+
         res.status(200).json({
-            message: 'Notification sent and logged.',
+            message: `Notification sent and emailed to ${emailsSent}/${studentEmails.length} students.`,
             notification: {
                 id: notifRes.rows[0].id,
                 title,
                 message,
                 type: type || 'announcement',
                 created_at: notifRes.rows[0].created_at
-            }
+            },
+            emailsSent,
+            emailsFailed,
+            totalStudents: studentEmails.length
         });
     } catch (error) {
         console.error('sendNotification error:', error);

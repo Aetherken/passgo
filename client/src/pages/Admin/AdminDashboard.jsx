@@ -223,9 +223,10 @@ export default function AdminDashboard() {
 
     const handleSendNotif = async () => {
         try {
-            await api.post('/admin/notifications', notifForm);
-            setNotifSent(true);
-            setTimeout(() => setNotifSent(false), 3000);
+            const r = await api.post('/admin/notifications', notifForm);
+            const data = r.data;
+            setNotifSent(`✓ Notification emailed to ${data.emailsSent || 0}/${data.totalStudents || 0} active students!`);
+            setTimeout(() => setNotifSent(false), 5000);
             setNotifForm({ title: '', message: '', type: 'announcement' });
             loadNotifications();
         } catch (err) {
@@ -902,7 +903,7 @@ export default function AdminDashboard() {
                                         <option value="maintenance">🔧 Maintenance</option>
                                     </select>
                                 </div>
-                                {notifSent && <div className="bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3">✓ Notification sent to all students!</div>}
+                                {notifSent && <div className="bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3">{notifSent}</div>}
                                 <button onClick={handleSendNotif} disabled={!notifForm.title || !notifForm.message}
                                     className="flex items-center gap-2 bg-[#131718] text-white px-8 py-4 rounded-full font-semibold text-sm hover:bg-[#FEC29F] hover:text-[#131718] transition-all disabled:opacity-40">
                                     <Send size={16} /> Send to All Students
