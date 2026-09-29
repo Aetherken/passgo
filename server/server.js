@@ -100,6 +100,22 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', msg: 'API up' });
 });
 
+// Email Diagnostic Endpoint - hit this to test if SMTP works on this server
+app.get('/api/test-email', async (req, res) => {
+    try {
+        const { sendEmailDiagnostic } = await import('./utils/mailer.js');
+        const targetEmail = req.query.to || process.env.EMAIL_USER || 'alanga031007@gmail.com';
+        const result = await sendEmailDiagnostic({
+            to: targetEmail,
+            subject: 'PassGo SMTP Diagnostic Test',
+            html: `<h3>✓ PassGo Email Works!</h3><p>Server time: ${new Date().toISOString()}</p>`
+        });
+        res.status(result.success ? 200 : 500).json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Catch-all 404 for API
 app.use('/api', (req, res) => {
     res.status(404).json({ message: `API Path ${req.url} not found` });

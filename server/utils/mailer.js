@@ -22,8 +22,8 @@ const getTransporter = () => {
             user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
             pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
         },
-        connectionTimeout: 8000, // 8s connection timeout
-        greetingTimeout: 5000,
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
         socketTimeout: 10000,
         tls: {
             rejectUnauthorized: false
@@ -41,6 +41,7 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
 
         if (!user || !pass) {
             console.error('[MAIL] ✗ Cannot send email: EMAIL_USER or EMAIL_PASS environment variables are missing.');
+            console.error('[MAIL]   EMAIL_USER set:', !!user, '| EMAIL_PASS set:', !!pass);
             return false;
         }
 
@@ -61,21 +62,53 @@ export const sendEmail = async ({ to, bcc, subject, html }) => {
             mailOptions.bcc = bcc;
         }
 
-        // Add 10s promise race safety timeout
-        const mailPromise = transporter.sendMail(mailOptions);
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('SMTP Connection Timeout (10s limit exceeded)')), 10000)
-        );
-
-        const info = await Promise.race([mailPromise, timeoutPromise]);
+        const info = await transporter.sendMail(mailOptions);
         console.log(`[MAIL] ✓ Email sent successfully to ${to}! MessageId: ${info.messageId}`);
         return true;
     } catch (error) {
         console.error(`[MAIL] ✗ Failed to send email to ${to}:`, error.message);
-        if (error.message.includes('535') || error.message.includes('Username and Password not accepted')) {
-            console.error('  👉 [MAIL DIAGNOSTIC] Gmail SMTP Authentication Failed (535 Bad Credentials).');
-            console.error('  👉 SOLUTION: Check EMAIL_PASS in server/.env & Cloud Environment Variables.');
-        }
         return false;
     }
+};
+
+// Diagnostic function - returns detailed result for the test endpoint
+export const sendEmailDiagnostic = async ({ to, subject, html }) => {
+    const result = {
+        emailUser: process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 5)}...` : 'NOT SET',
+        emailPassSet: !!process.env.EMAIL_PASS,
+        emailPassLength: process.env.EMAIL_PASS?.length || 0,
+        emailHost: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        emailPort: process.env.EMAIL_PORT || '587',
+        to,
+        success: false,
+        error: null,
+        messageId: null,
+    };
+
+    try {
+        const transporter = getTransporter();
+
+        console.log('[MAIL-DIAG] Verifying SMTP connection...');
+        await transporter.verify();
+        result.smtpVerified = true;
+        console.log('[MAIL-DIAG] ✓ SMTP verified');
+
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to,
+            subject: subject || 'PassGo Diagnostic Test',
+            html: html || '<h3>PassGo Email System is Working!</h3><p>This is a diagnostic test email.</p>',
+        });
+
+        result.success = true;
+        result.messageId = info.messageId;
+        console.log('[MAIL-DIAG] ✓ Email sent:', info.messageId);
+    } catch (error) {
+        result.smtpVerified = result.smtpVerified || false;
+        result.success = false;
+        result.error = error.message;
+        console.error('[MAIL-DIAG] ✗ Failed:', error.message);
+    }
+
+    return result;
 };

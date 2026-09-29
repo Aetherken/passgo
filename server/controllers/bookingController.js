@@ -117,9 +117,11 @@ export const createBooking = async (req, res) => {
         </div>
       </div>
     `;
-        // Send email
+        // Send email (non-blocking)
         if (user?.email) {
-            await sendEmail({ to: user.email, subject: `PassGo Ticket Confirmation #${qrToken.slice(0, 8)}`, html: emailHtml });
+            sendEmail({ to: user.email, subject: `PassGo Ticket Confirmation #${qrToken.slice(0, 8)}`, html: emailHtml })
+                .then(ok => console.log(`[BOOKING] Confirmation email to ${user.email}: ${ok ? 'SENT' : 'FAILED'}`))
+                .catch(err => console.error('[BOOKING] Confirmation email error:', err.message));
         }
 
         return res.status(201).json({

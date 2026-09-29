@@ -56,8 +56,10 @@ export const register = async (req, res) => {
       </div>
     `;
 
-        // Send verification email
-        await sendEmail({ to: email.toLowerCase().trim(), subject: `PassGo Email Verification Code: ${verificationToken}`, html: emailHtml });
+        // Send verification email (non-blocking so API doesn't hang on slow SMTP)
+        sendEmail({ to: email.toLowerCase().trim(), subject: `PassGo Email Verification Code: ${verificationToken}`, html: emailHtml })
+            .then(ok => console.log(`[AUTH] Verification email to ${email}: ${ok ? 'SENT' : 'FAILED'}`))
+            .catch(err => console.error('[AUTH] Verification email error:', err.message));
 
         res.status(201).json({
             message: 'Registration successful. Verification code sent to your email.',
@@ -234,7 +236,9 @@ export const resendVerification = async (req, res) => {
       </div>
     `;
 
-        await sendEmail({ to: user.email, subject: `New PassGo Verification Code: ${newCode}`, html: emailHtml });
+        sendEmail({ to: user.email, subject: `New PassGo Verification Code: ${newCode}`, html: emailHtml })
+            .then(ok => console.log(`[AUTH] Resend verification to ${user.email}: ${ok ? 'SENT' : 'FAILED'}`))
+            .catch(err => console.error('[AUTH] Resend verification error:', err.message));
 
         res.status(200).json({ message: 'A new verification code has been sent to your email.' });
 
