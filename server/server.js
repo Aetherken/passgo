@@ -89,6 +89,14 @@ app.get('/api/routes/:id/slots', getSlotsByRoute);
 app.get('/api/fare', getFare);
 app.get('/api/buses', getBuses);
 app.get('/api/timeslots', getTimeSlots);
+app.get('/api/notifications', async (req, res) => {
+    try {
+        const result = await db.query('SELECT id, title, message, type, created_at FROM notifications ORDER BY created_at DESC LIMIT 5');
+        res.status(200).json(result.rows);
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch notifications.' });
+    }
+});
 
 // Standard API Routes
 app.use('/api/auth', authRoutes);

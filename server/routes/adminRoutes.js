@@ -3,7 +3,7 @@ import multer from 'multer';
 import {
     getBuses, addBus, updateBus, deleteBus,
     getStudents, toggleStudentState, flagStudent, deleteStudent,
-    sendNotification, getDashboardStats,
+    sendNotification, getNotifications, deleteNotification, getDashboardStats,
     getTimeSlots, addTimeSlot, updateTimeSlot,
     getAllBookings, getRevenueData,
     getDrivers, addDriver, deleteCity, deleteRoute
@@ -65,7 +65,9 @@ router.post('/students/:id/flag', flagStudent);
 router.delete('/students/:id', deleteStudent);
 
 // Notifications & Comm
+router.get('/notifications', getNotifications);
 router.post('/notifications', sendNotification);
+router.delete('/notifications/:id', deleteNotification);
 
 // SUPER ADMIN ONLY FEATURES
 router.post('/cities', requireSuperAdmin, async (req, res) => {

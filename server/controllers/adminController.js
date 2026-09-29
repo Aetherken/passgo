@@ -204,39 +204,73 @@ export const deleteStudent = async (req, res) => {
 };
 
 // ---- NOTIFICATIONS ----
+export const getNotifications = async (req, res) => {
+    try {
+        const result = await db.query(
+            'SELECT id, title, message, type, created_at FROM notifications ORDER BY created_at DESC LIMIT 50'
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const deleteNotification = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM notifications WHERE id = $1', [id]);
+        res.status(200).json({ message: 'Notification deleted.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 export const sendNotification = async (req, res) => {
     const { title, message, type } = req.body;
     const adminId = req.user?.id || req.session?.userId;
 
     try {
-        await db.query(
-            'INSERT INTO notifications (title, message, type, sent_by) VALUES ($1, $2, $3, $4)',
-            [title, message, type, adminId]
+        const notifRes = await db.query(
+            'INSERT INTO notifications (title, message, type, sent_by) VALUES ($1, $2, $3, $4) RETURNING id, created_at',
+            [title, message, type || 'announcement', adminId]
         );
 
         const studentsResult = await db.query(
             'SELECT email FROM users WHERE role = $1 AND is_active = true',
             ['student']
         );
-        const bccList = studentsResult.rows.map(s => s.email).join(',');
+        const studentEmails = studentsResult.rows.map(s => s.email).filter(Boolean);
 
         const emailHtml = `
-      <div style="font-family: Arial; padding: 20px;">
-        <h2>PassGo Alert: ${title}</h2>
-        <div style="padding: 15px; border-left: 4px solid #FEC29F; background-color: #f9f9f9;">
-          <p>${message}</p>
+      <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
+        <h2 style="color: #131718; text-align: center;">PassGo Announcement: ${title}</h2>
+        <div style="padding: 16px; border-left: 4px solid #FEC29F; background-color: #f9f9f9; border-radius: 6px; font-size: 15px; color: #333333; line-height: 1.6;">
+          ${message}
         </div>
-        <br><br>
-        <small>This is an automated message from PassGo Administration.</small>
+        <br>
+        <p style="font-size: 12px; color: #888888; text-align: center;">This is an automated announcement from PassGo Transport Administration.</p>
       </div>
     `;
 
-        if (bccList) {
-            await sendEmail({ to: 'noreply@passgo.com', bcc: bccList, subject: `PassGo Update: ${title}`, html: emailHtml });
+        if (studentEmails.length > 0) {
+            for (const email of studentEmails) {
+                sendEmail({ to: email, subject: `PassGo Update: ${title}`, html: emailHtml })
+                    .catch(err => console.error(`[NOTIF-MAIL] Failed to notify ${email}:`, err.message));
+            }
         }
 
-        res.status(200).json({ message: 'Notification sent and logged.' });
+        res.status(200).json({
+            message: 'Notification sent and logged.',
+            notification: {
+                id: notifRes.rows[0].id,
+                title,
+                message,
+                type: type || 'announcement',
+                created_at: notifRes.rows[0].created_at
+            }
+        });
     } catch (error) {
+        console.error('sendNotification error:', error);
         res.status(500).json({ message: error.message });
     }
 };

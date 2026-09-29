@@ -91,6 +91,7 @@ export default function AdminDashboard() {
         loadRevenueData();
         loadDrivers();
         loadCities();
+        loadNotifications();
         api.get('/fare')
             .then(r => {
                 setFare(r.data.fare);
@@ -98,6 +99,11 @@ export default function AdminDashboard() {
             })
             .catch(err => console.error('Fare load failed:', err));
     }, [user]);
+
+    const loadNotifications = () =>
+        api.get('/admin/notifications')
+            .then(r => setSentNotifs(Array.isArray(r.data) ? r.data : []))
+            .catch(err => console.error('Notifications load failed:', err));
 
     const loadCities = () =>
         api.get('/cities')
@@ -216,11 +222,27 @@ export default function AdminDashboard() {
     };
 
     const handleSendNotif = async () => {
-        await api.post('/admin/notifications', notifForm);
-        setSentNotifs(n => [{ ...notifForm, sentAt: new Date().toLocaleString() }, ...n]);
-        setNotifSent(true);
-        setTimeout(() => setNotifSent(false), 3000);
-        setNotifForm({ title: '', message: '', type: 'announcement' });
+        try {
+            await api.post('/admin/notifications', notifForm);
+            setNotifSent(true);
+            setTimeout(() => setNotifSent(false), 3000);
+            setNotifForm({ title: '', message: '', type: 'announcement' });
+            loadNotifications();
+        } catch (err) {
+            console.error('Send notif fail:', err);
+            alert(err.response?.data?.message || 'Failed to send notification.');
+        }
+    };
+
+    const handleDeleteNotif = async (id) => {
+        if (!confirm('Delete this notification entry?')) return;
+        try {
+            await api.delete(`/admin/notifications/${id}`);
+            loadNotifications();
+        } catch (err) {
+            console.error('Delete notif fail:', err);
+            alert('Failed to delete notification.');
+        }
     };
 
     const exportCSV = (data, filename) => {
@@ -889,14 +911,32 @@ export default function AdminDashboard() {
 
                             {sentNotifs.length > 0 && (
                                 <div className="space-y-3">
-                                    <p className="font-semibold text-sm text-gray-500 uppercase tracking-wider">Sent Log</p>
+                                    <p className="font-semibold text-sm text-gray-500 uppercase tracking-wider">Sent Notification History ({sentNotifs.length})</p>
                                     {sentNotifs.map((n, i) => (
-                                        <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 text-sm">
-                                            <div className="flex justify-between">
-                                                <p className="font-semibold">{n.title}</p>
-                                                <span className="text-xs text-gray-400">{n.sentAt}</span>
+                                        <div key={n.id || i} className="bg-white rounded-2xl p-5 border border-gray-100 text-sm space-y-2">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                                        n.type === 'delay' ? 'bg-orange-100 text-orange-700' :
+                                                        n.type === 'maintenance' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-purple-100 text-purple-700'
+                                                    }`}>
+                                                        {n.type === 'delay' ? '⚠️ Delay' : n.type === 'maintenance' ? '🔧 Maintenance' : '📢 Announcement'}
+                                                    </span>
+                                                    <p className="font-bold text-[#131718]">{n.title}</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs text-gray-400">
+                                                        {n.created_at ? new Date(n.created_at).toLocaleString() : (n.sentAt || 'Just now')}
+                                                    </span>
+                                                    {n.id && (
+                                                        <button onClick={() => handleDeleteNotif(n.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <p className="text-gray-500 mt-1">{n.message}</p>
+                                            <p className="text-gray-600 text-xs leading-relaxed">{n.message}</p>
                                         </div>
                                     ))}
                                 </div>

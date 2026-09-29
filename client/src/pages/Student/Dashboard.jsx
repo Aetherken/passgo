@@ -25,12 +25,14 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [fare, setFare] = useState(25);
+    const [notifications, setNotifications] = useState([]);
     const ticketRef = useRef(null);
 
     useEffect(() => {
         api.get('/cities').then(r => setCities(Array.isArray(r.data) ? r.data : [])).catch(() => setCities([]));
         api.get('/routes').then(r => setRoutes(Array.isArray(r.data) ? r.data : [])).catch(() => setRoutes([]));
         api.get('/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
+        api.get('/notifications').then(r => setNotifications(Array.isArray(r.data) ? r.data : [])).catch(() => setNotifications([]));
     }, []);
 
     useEffect(() => {
@@ -124,6 +126,31 @@ export default function Dashboard() {
                         >
                             Verify Email Now →
                         </Link>
+                    </div>
+                )}
+
+                {notifications.length > 0 && (
+                    <div className="mb-6 space-y-2">
+                        {notifications.slice(0, 2).map(n => (
+                            <div key={n.id} className={`rounded-2xl p-4 border flex items-start gap-3 text-sm ${
+                                n.type === 'delay' ? 'bg-orange-50 border-orange-200 text-orange-900' :
+                                n.type === 'maintenance' ? 'bg-blue-50 border-blue-200 text-blue-900' :
+                                'bg-purple-50 border-purple-200 text-purple-900'
+                            }`}>
+                                <span className="text-lg">
+                                    {n.type === 'delay' ? '⚠️' : n.type === 'maintenance' ? '🔧' : '📢'}
+                                </span>
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-bold text-[#131718]">{n.title}</p>
+                                        <span className="text-[11px] text-gray-500">
+                                            {n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 
