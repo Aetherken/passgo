@@ -119,7 +119,7 @@ export const createBooking = async (req, res) => {
     `;
         // Send email
         if (user?.email) {
-            sendEmail({ to: user.email, subject: `PassGo Ticket Confirmation #${qrToken.slice(0, 8)}`, html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
+            await sendEmail({ to: user.email, subject: `PassGo Ticket Confirmation #${qrToken.slice(0, 8)}`, html: emailHtml });
         }
 
         return res.status(201).json({
