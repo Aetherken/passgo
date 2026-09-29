@@ -6,13 +6,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Explicitly resolve .env from server directory with override: true
-dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
-dotenv.config({ override: true });
+// Only load .env file in development — in production, use system env vars (Render/Railway)
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config({ path: path.resolve(__dirname, '../.env') });
+}
 
 const getTransporter = () => {
-    const port = Number(process.env.EMAIL_PORT) || 587;
+    const port = Number(process.env.EMAIL_PORT) || 465;
     const isSecure = port === 465;
+
+    console.log(`[MAIL] Creating transporter: host=${process.env.EMAIL_HOST || 'smtp.gmail.com'}, port=${port}, secure=${isSecure}`);
 
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -33,9 +36,6 @@ const getTransporter = () => {
 
 export const sendEmail = async ({ to, bcc, subject, html }) => {
     try {
-        dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
-        dotenv.config({ override: true });
-
         const user = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '';
         const pass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
 
@@ -78,11 +78,13 @@ export const sendEmailDiagnostic = async ({ to, subject, html }) => {
         emailPassSet: !!process.env.EMAIL_PASS,
         emailPassLength: process.env.EMAIL_PASS?.length || 0,
         emailHost: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        emailPort: process.env.EMAIL_PORT || '587',
+        emailPort: process.env.EMAIL_PORT || '465',
+        nodeEnv: process.env.NODE_ENV || 'not set',
         to,
         success: false,
         error: null,
         messageId: null,
+        smtpVerified: false,
     };
 
     try {
@@ -104,7 +106,6 @@ export const sendEmailDiagnostic = async ({ to, subject, html }) => {
         result.messageId = info.messageId;
         console.log('[MAIL-DIAG] ✓ Email sent:', info.messageId);
     } catch (error) {
-        result.smtpVerified = result.smtpVerified || false;
         result.success = false;
         result.error = error.message;
         console.error('[MAIL-DIAG] ✗ Failed:', error.message);
