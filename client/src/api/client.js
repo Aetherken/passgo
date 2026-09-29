@@ -5,23 +5,26 @@ const api = axios.create({
     withCredentials: true,
 });
 
-// Intercept requests to attach Authorization header if available
+// Intercept requests to attach Authorization header safely if available
 api.interceptors.request.use((config) => {
-    const userStr = localStorage.getItem('passgo_user') || localStorage.getItem('user');
-    if (userStr) {
-        try {
-            const user = JSON.parse(userStr);
-            if (user && user.id) {
-                config.headers.Authorization = `Bearer ${user.id}`;
-                config.headers['X-User-Id'] = String(user.id);
+    try {
+        const userStr = localStorage.getItem('passgo_user') || localStorage.getItem('user');
+        if (userStr && userStr !== 'undefined' && userStr !== 'null' && userStr !== '[object Object]') {
+            let userId = null;
+            try {
+                const parsed = JSON.parse(userStr);
+                if (parsed && parsed.id) userId = parsed.id;
+            } catch (e) {
+                if (!isNaN(userStr)) userId = parseInt(userStr, 10);
             }
-        } catch (e) {
-            // If stored string is directly a user ID or token
-            if (userStr && userStr !== 'undefined') {
-                config.headers.Authorization = `Bearer ${userStr}`;
-                config.headers['X-User-Id'] = String(userStr);
+
+            if (userId) {
+                config.headers.Authorization = `Bearer ${userId}`;
+                config.headers['X-User-Id'] = String(userId);
             }
         }
+    } catch (e) {
+        // Safe failover
     }
     return config;
 });
