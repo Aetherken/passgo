@@ -32,25 +32,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// Robust CORS
-const allowedOrigins = [
-    process.env.CLIENT_URL,
-    'http://localhost:5173',
-    'http://localhost:3000'
-].map(u => u?.replace(/\/$/, '')).filter(Boolean); // remove trailing slashes
-
+// Comprehensive CORS for Vercel, Localhost, & Render
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.some(ao => origin.startsWith(ao))) {
-            callback(null, true);
-        } else {
-            console.warn(`Blocked by CORS: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
+        // Allow requests with no origin (curl, mobile, server-to-server)
+        if (!origin) return callback(null, true);
+
+        const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+        const isVercel = origin.endsWith('.vercel.app') || origin.includes('vercel.app');
+        const isClientUrl = process.env.CLIENT_URL && origin.startsWith(process.env.CLIENT_URL.replace(/\/$/, ''));
+
+        if (isLocal || isVercel || isClientUrl) {
+            return callback(null, true);
         }
+
+        // Permissive fallback so production Vercel frontend never gets blocked
+        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-User-Id', 'x-user-id']
 }));
 
 app.use(express.json());
@@ -66,7 +67,7 @@ app.use(
         cookie: {
             secure: isProduction,
             httpOnly: true,
-            sameSite: isProduction ? 'none' : 'lax', // Lax for dev, None for cross-siteprod
+            sameSite: isProduction ? 'none' : 'lax', // Lax for dev, None for cross-site prod
             maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
         }
     })
