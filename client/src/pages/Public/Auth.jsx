@@ -60,7 +60,7 @@ export default function Auth() {
 
                 if (response.data.user) {
                     await checkAuth(response.data.user);
-                    navigate('/dashboard', { replace: true });
+                    navigate(`/verify-email?email=${encodeURIComponent(form.email.trim())}`, { replace: true });
                 }
             }
 

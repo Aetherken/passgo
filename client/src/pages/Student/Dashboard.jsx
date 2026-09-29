@@ -109,6 +109,24 @@ export default function Dashboard() {
                     <p className="text-gray-500 mt-2">Book your bus pass using the steps below.</p>
                 </div>
 
+                {user && !user.is_verified && (
+                    <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl">⚠️</span>
+                            <div>
+                                <p className="font-semibold text-sm">Email Verification Pending</p>
+                                <p className="text-xs text-amber-700">Please verify your email ({user.email}) to receive your booking receipts & pass updates.</p>
+                            </div>
+                        </div>
+                        <Link
+                            to={`/verify-email?email=${encodeURIComponent(user.email || '')}`}
+                            className="bg-[#131718] text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-amber-800 transition-colors whitespace-nowrap"
+                        >
+                            Verify Email Now →
+                        </Link>
+                    </div>
+                )}
+
                 {/* Progress Bar */}
                 <div className="flex items-center gap-0 mb-10">
                     {STEPS.map((s, i) => (

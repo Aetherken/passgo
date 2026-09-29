@@ -84,25 +84,42 @@ export const createBooking = async (req, res) => {
         const routeDetails = routeResult.rows[0];
 
         const emailHtml = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Your PassGo Ticket is Confirmed!</h2>
-        <p>Hi ${user?.name || 'Student'},</p>
-        <ul>
-          <li><strong>Student ID:</strong> ${user?.student_id || 'N/A'}</li>
-          <li><strong>From:</strong> ${routeDetails?.origin || 'VJEC'}</li>
-          <li><strong>To:</strong> ${routeDetails?.destination || 'Destination'}</li>
-          <li><strong>Date:</strong> ${bookingDate}</li>
-          <li><strong>Time:</strong> ${routeDetails?.departure_time || ''} - ${routeDetails?.arrival_time || ''}</li>
-          <li><strong>Bus:</strong> ${routeDetails?.bus_number || ''}</li>
-          <li><strong>Fare Paid:</strong> ₹${farePaid} (${paymentMethod.toUpperCase()})</li>
-        </ul>
-        <p>Your unique ticket ID is: <strong>${qrToken}</strong></p>
-        <p>Have a great trip!</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
+        <div style="background-color: #131718; padding: 24px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px;">PASSGO</h1>
+          <p style="margin: 4px 0 0; color: #FEC29F; font-size: 14px; font-weight: bold; text-transform: uppercase;">Pass Booking Confirmed ✓</p>
+        </div>
+        <div style="padding: 24px;">
+          <p style="font-size: 16px; color: #333333;">Hi <strong>${user?.name || 'Student'}</strong>,</p>
+          <p style="color: #666666; font-size: 14px;">Your campus bus pass has been booked successfully! Below are your digital pass details:</p>
+          
+          <div style="background-color: #f8f9fa; border: 1px dashed #cccccc; border-radius: 12px; padding: 16px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr><td style="padding: 6px 0; color: #666;">Student ID:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${user?.student_id || 'N/A'}</td></tr>
+              <tr><td style="padding: 6px 0; color: #666;">From:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${routeDetails?.origin || 'VJEC'}</td></tr>
+              <tr><td style="padding: 6px 0; color: #666;">To:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${routeDetails?.destination || 'Destination'}</td></tr>
+              <tr><td style="padding: 6px 0; color: #666;">Date:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${bookingDate}</td></tr>
+              <tr><td style="padding: 6px 0; color: #666;">Departure:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${routeDetails?.departure_time ? routeDetails.departure_time.slice(0, 5) : 'N/A'}</td></tr>
+              <tr><td style="padding: 6px 0; color: #666;">Bus Number:</td><td style="padding: 6px 0; text-align: right; font-weight: bold; color: #131718;">${routeDetails?.bus_number || 'VJEC Bus'}</td></tr>
+              <tr style="border-top: 1px solid #e0e0e0;"><td style="padding: 10px 0 0; color: #666; font-size: 16px; font-weight: bold;">Fare Paid:</td><td style="padding: 10px 0 0; text-align: right; font-size: 16px; font-weight: bold; color: #2e7d32;">₹${farePaid} (${paymentMethod ? paymentMethod.toUpperCase() : 'UPI'})</td></tr>
+            </table>
+          </div>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <p style="font-size: 12px; color: #888888; margin-bottom: 4px;">Ticket QR / Token ID:</p>
+            <code style="background-color: #131718; color: #FEC29F; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-family: monospace; display: inline-block;">${qrToken}</code>
+          </div>
+
+          <p style="font-size: 13px; color: #666666; text-align: center;">Show your QR code from your student dashboard to the driver when boarding.</p>
+        </div>
+        <div style="background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #888888;">
+          Thank you for choosing PassGo Campus Transport. Have a safe journey!
+        </div>
       </div>
     `;
         // Send email
         if (user?.email) {
-            sendEmail({ to: user.email, subject: 'PassGo Booking Confirmation', html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
+            sendEmail({ to: user.email, subject: `PassGo Ticket Confirmation #${qrToken.slice(0, 8)}`, html: emailHtml }).catch(err => console.error('Delayed email fail:', err));
         }
 
         return res.status(201).json({

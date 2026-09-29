@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import Landing from "./pages/Public/Landing";
 import Auth from "./pages/Public/Auth";
+import VerifyEmail from "./pages/Public/VerifyEmail";
 
 import Dashboard from "./pages/Student/Dashboard";
 import LiveTracking from "./pages/Student/LiveTracking";
@@ -79,6 +80,7 @@ function App() {
 
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           <Route path="/redirect" element={<RoleRedirect />} />
 
