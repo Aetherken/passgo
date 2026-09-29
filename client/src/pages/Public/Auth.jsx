@@ -20,6 +20,15 @@ export default function Auth() {
     const handleSubmit = async e => {
         e.preventDefault();
         setError('');
+
+        if (mode === 'register') {
+            const STUDENT_ID_REGEX = /^vml(23|24|25)(cc|ad|cse|csd|csb|me|ce|ee|eee)[0-9]{3}$/i;
+            if (!STUDENT_ID_REGEX.test(form.studentId.trim())) {
+                setError('Invalid Student ID format. Must follow format vml[23-25][branch][001-999] (e.g., vml25cc008)');
+                return;
+            }
+        }
+
         setLoading(true);
 
         try {
@@ -36,7 +45,7 @@ export default function Auth() {
             } else {
                 const response = await api.post('/auth/register', {
                     name: form.name,
-                    studentId: form.studentId,
+                    studentId: form.studentId.trim(),
                     phone: form.phone,
                     email: form.email,
                     password: form.password
@@ -124,9 +133,12 @@ export default function Auth() {
                                         value={form.studentId}
                                         onChange={handleChange}
                                         required
-                                        placeholder="VJEC2024001"
+                                        placeholder="e.g. vml25cc008"
                                         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none transition-colors"
                                     />
+                                    <p className="text-[11px] text-gray-400 mt-1">
+                                        Format: <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-700">vml[23-25][branch][001-999]</code> (e.g. vml25cc008)
+                                    </p>
                                 </div>
 
                                 <div>

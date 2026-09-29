@@ -10,9 +10,17 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: 'All fields are required.' });
         }
 
+        // Validate Student ID format: vml(23-25)(cc,ad,cse,csd,csb,me,ce,ee,eee)(001-999)
+        const STUDENT_ID_REGEX = /^vml(23|24|25)(cc|ad|cse|csd|csb|me|ce|ee|eee)[0-9]{3}$/i;
+        if (!STUDENT_ID_REGEX.test(studentId.trim())) {
+            return res.status(400).json({
+                message: 'Invalid Student ID format. Must match format vml[23-25][branch][001-999] (e.g., vml25cc008).'
+            });
+        }
+
         const existing = await db.query(
             'SELECT id FROM users WHERE email = $1 OR student_id = $2',
-            [email, studentId]
+            [email, studentId.trim()]
         );
         if (existing.rows.length > 0) {
             return res.status(409).json({ message: 'User with this email or Student ID already exists.' });

@@ -12,15 +12,45 @@ export const getBuses = async (req, res) => {
 };
 
 export const addBus = async (req, res) => {
-    const { busNumber, operatorName, capacity, seatsBooked } = req.body;
+    const { busNumber, operatorName, capacity, seatsBooked, routeId, cityId, departureTime, arrivalTime } = req.body;
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
         const result = await db.query(
             'INSERT INTO buses (bus_number, operator_name, capacity, seats_booked, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [busNumber, operatorName, capacity, seatsBooked || 0, imageUrl]
+            [busNumber, operatorName || 'VJEC Transport', capacity || 50, seatsBooked || 0, imageUrl]
         );
-        res.status(201).json({ message: 'Bus added', id: result.rows[0].id, imageUrl });
+        const busId = result.rows[0].id;
+
+        // Auto-assign to route and create time slot if provided
+        let targetRouteId = routeId;
+        if (!targetRouteId && cityId) {
+            const rRes = await db.query('SELECT id FROM routes WHERE destination_id = $1 LIMIT 1', [cityId]);
+            if (rRes.rows.length > 0) targetRouteId = rRes.rows[0].id;
+        }
+
+        if (targetRouteId && departureTime && arrivalTime) {
+            await db.query(
+                'INSERT INTO time_slots (route_id, bus_id, departure_time, arrival_time, available_seats) VALUES ($1, $2, $3, $4, $5)',
+                [targetRouteId, busId, departureTime, arrivalTime, capacity || 50]
+            );
+        }
+
+        res.status(201).json({ message: 'Bus added', id: busId, imageUrl });
+    } catch (error) {
+        console.error('addBus error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const addTimeSlot = async (req, res) => {
+    const { routeId, busId, departureTime, arrivalTime, availableSeats } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO time_slots (route_id, bus_id, departure_time, arrival_time, available_seats) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [routeId, busId, departureTime, arrivalTime, availableSeats || 50]
+        );
+        res.status(201).json({ message: 'Time slot created', id: result.rows[0].id });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -4,7 +4,7 @@ import {
     getBuses, addBus, updateBus, deleteBus,
     getStudents, toggleStudentState, flagStudent,
     sendNotification, getDashboardStats,
-    getTimeSlots, updateTimeSlot,
+    getTimeSlots, addTimeSlot, updateTimeSlot,
     getAllBookings, getRevenueData,
     getDrivers, addDriver
 } from '../controllers/adminController.js';
@@ -45,6 +45,7 @@ router.delete('/buses/:id', deleteBus);
 
 // Time Slot Management
 router.get('/timeslots', getTimeSlots);
+router.post('/timeslots', addTimeSlot);
 router.put('/timeslots/:id', updateTimeSlot);
 
 // All Bookings
@@ -68,13 +69,23 @@ router.post('/notifications', sendNotification);
 // SUPER ADMIN ONLY FEATURES
 router.post('/cities', requireSuperAdmin, async (req, res) => {
     try {
-        const result = await db.query(
+        const cityRes = await db.query(
             'INSERT INTO cities (name, description) VALUES ($1, $2) RETURNING id',
-            [req.body.name, req.body.description]
+            [req.body.name, req.body.description || 'Campus destination city.']
         );
-        res.status(201).json({ id: result.rows[0].id, ...req.body });
+        const cityId = cityRes.rows[0].id;
+        const dist = req.body.distanceKm ? Number(req.body.distanceKm) : 35.0;
+        const dur = req.body.durationMins ? Number(req.body.durationMins) : 60;
+
+        await db.query(
+            'INSERT INTO routes (origin, destination_id, distance_km, estimated_duration_mins) VALUES ($1, $2, $3, $4)',
+            ['Vimal Jyothi Engineering College', cityId, dist, dur]
+        );
+
+        res.status(201).json({ id: cityId, name: req.body.name, description: req.body.description });
     } catch (err) {
-        res.status(500).json({ message: 'Failed to insert city.' });
+        console.error('Add City error:', err);
+        res.status(500).json({ message: 'Failed to insert city and route.' });
     }
 });
 

@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     // Buses
     const [buses, setBuses] = useState([]);
     const [showAddBus, setShowAddBus] = useState(false);
-    const [busForm, setBusForm] = useState({ busNumber: '', operatorName: '', capacity: '', seatsBooked: '0' });
+    const [busForm, setBusForm] = useState({ busNumber: '', operatorName: 'VJEC Transport', capacity: '50', seatsBooked: '0', cityId: '', departureTime: '07:30', arrivalTime: '09:00' });
     const [busFile, setBusFile] = useState(null);
 
     // Edit Bus
@@ -139,9 +139,10 @@ export default function AdminDashboard() {
         if (busFile) fd.append('image', busFile);
         await api.post('/admin/buses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         setShowAddBus(false);
-        setBusForm({ busNumber: '', operatorName: '', capacity: '', seatsBooked: '0' });
+        setBusForm({ busNumber: '', operatorName: 'VJEC Transport', capacity: '50', seatsBooked: '0', cityId: '', departureTime: '07:30', arrivalTime: '09:00' });
         setBusFile(null);
         loadBuses();
+        loadTimeSlots();
     };
 
     const handleOpenEdit = (bus) => {
@@ -388,7 +389,7 @@ export default function AdminDashboard() {
                                             <h2 className="font-display text-2xl">ADD BUS</h2>
                                             <button onClick={() => setShowAddBus(false)}><X size={20} /></button>
                                         </div>
-                                        <div className="space-y-3">
+                                        <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
                                             {[
                                                 ['Bus Number', 'busNumber', 'KL-58-X-0000', 'text'],
                                                 ['Operator', 'operatorName', 'VJEC Transport', 'text'],
@@ -402,6 +403,35 @@ export default function AdminDashboard() {
                                                         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none" />
                                                 </div>
                                             ))}
+
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Assign Destination City / Route</label>
+                                                <select value={busForm.cityId} onChange={e => setBusForm(f => ({ ...f, cityId: e.target.value }))}
+                                                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#131718] focus:outline-none bg-white">
+                                                    <option value="">Select Destination City (Optional)</option>
+                                                    {uniqueCities.map(c => {
+                                                        const slotMatch = timeSlots.find(s => s.destination === c);
+                                                        return <option key={c} value={slotMatch ? slotMatch.route_id : c}>{c}</option>;
+                                                    })}
+                                                </select>
+                                                <p className="text-[11px] text-gray-400 mt-1">Assigning a city automatically makes this bus bookable for that route!</p>
+                                            </div>
+
+                                            {busForm.cityId && (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Departure Time</label>
+                                                        <input type="time" value={busForm.departureTime} onChange={e => setBusForm(f => ({ ...f, departureTime: e.target.value }))}
+                                                            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-[#131718] focus:outline-none" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Arrival Time</label>
+                                                        <input type="time" value={busForm.arrivalTime} onChange={e => setBusForm(f => ({ ...f, arrivalTime: e.target.value }))}
+                                                            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-[#131718] focus:outline-none" />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div>
                                                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Bus Image</label>
                                                 <input type="file" accept="image/*" onChange={e => setBusFile(e.target.files[0])}

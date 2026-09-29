@@ -7,10 +7,19 @@ import api from '../../api/client';
 export default function Landing() {
     const { user, role } = useAuth();
     const [fare, setFare] = useState(25);
+    const [cities, setCities] = useState([]);
 
     useEffect(() => {
         api.get('/admin/fare').then(r => setFare(r.data.fare)).catch(() => setFare(25));
+        api.get('/cities').then(r => setCities(Array.isArray(r.data) ? r.data : [])).catch(() => setCities([]));
     }, []);
+
+    const defaultCities = ['Kannur', 'Thalassery', 'Payyanur', 'Iritty', 'Mattannur', 'Taliparamba'];
+    const cityList = cities.length > 0 ? cities.map(c => c.name) : defaultCities;
+    const countNum = cityList.length;
+    const countWords = ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE'];
+    const countWord = countWords[countNum] || String(countNum);
+    const bgColors = ['#FFF6C6', '#D1E6F6', '#FFDAE4', '#FEC29F'];
 
     return (
         <div className="min-h-screen bg-white text-[#131718] overflow-x-hidden">
@@ -71,7 +80,7 @@ export default function Landing() {
 
                 {/* Stat bar */}
                 <div className="mt-16 flex flex-wrap gap-10">
-                    {[['6', 'Cities Covered'], ['12', 'Daily Trips'], [`₹${fare}`, 'Flat Fare']].map(([num, label]) => (
+                    {[[String(countNum), 'Cities Covered'], ['12', 'Daily Trips'], [`₹${fare}`, 'Flat Fare']].map(([num, label]) => (
                         <div key={label}>
                             <p className="font-display text-5xl text-[#131718]">{num}</p>
                             <p className="text-sm text-gray-500 font-medium mt-1">{label}</p>
@@ -92,7 +101,7 @@ export default function Landing() {
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {[
-                        { num: '01', icon: <Bus size={28} />, title: 'Pick Your Route', desc: 'Choose from 6 city destinations from Vimal Jyothi Engineering College. View bus timings and available seats in real time.', bg: '#FEC29F' },
+                        { num: '01', icon: <Bus size={28} />, title: 'Pick Your Route', desc: `Choose from ${countNum} city destinations from Vimal Jyothi Engineering College. View bus timings and available seats in real time.`, bg: '#FEC29F' },
                         { num: '02', icon: <QrCode size={28} />, title: 'Book & Pay', desc: `Select your time slot and pay just ₹${fare} flat. Choose UPI or card — checkout takes under 30 seconds.`, bg: '#D1E6F6' },
                         { num: '03', icon: <MapPin size={28} />, title: 'Show Your Pass', desc: 'Your digital QR ticket is instant. Show it to the driver or download as a PDF. Track your bus live on the map.', bg: '#FFDAE4' },
                     ].map(({ num, icon, title, desc, bg }) => (
@@ -116,9 +125,9 @@ export default function Landing() {
                 <div className="grid md:grid-cols-2 gap-16 items-center">
                     <div>
                         <p className="text-xs font-semibold tracking-[0.3em] uppercase text-[#FEC29F] mb-4">Coverage</p>
-                        <h2 className="font-display text-[clamp(40px,5vw,72px)] mb-6">SIX CITIES,<br />ONE TICKET.</h2>
+                        <h2 className="font-display text-[clamp(40px,5vw,72px)] mb-6">{countWord} CITIES,<br />ONE TICKET.</h2>
                         <p className="text-gray-500 leading-relaxed mb-8">
-                            PassGo connects VJEC students to Kannur, Thalassery, Payyanur, Iritty, Mattannur, and Taliparamba —
+                            PassGo connects VJEC students to {cityList.slice(0, -1).join(', ')}{cityList.length > 1 ? ` and ${cityList[cityList.length - 1]}` : cityList[0]} —
                             with morning and evening trips every single day.
                         </p>
                         <Link to="/auth"
@@ -127,10 +136,10 @@ export default function Landing() {
                         </Link>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        {['Kannur', 'Thalassery', 'Payyanur', 'Iritty', 'Mattannur', 'Taliparamba'].map((city, i) => (
+                        {cityList.map((city, i) => (
                             <div key={city}
-                                className="rounded-2xl p-5 font-display text-2xl"
-                                style={{ backgroundColor: ['#FFF6C6', '#D1E6F6', '#FFDAE4', '#FEC29F', '#D1E6F6', '#FFF6C6'][i] }}>
+                                className="rounded-2xl p-5 font-display text-2xl shadow-sm border border-gray-100"
+                                style={{ backgroundColor: bgColors[i % bgColors.length] }}>
                                 {city}
                             </div>
                         ))}
