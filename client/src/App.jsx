@@ -31,11 +31,21 @@ const Spinner = () => (
 const ProtectedRoute = ({ children, roles }) => {
   const { user, role, loading } = useAuth();
 
-  if (loading) return <Spinner />;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (!role) return <Spinner />;
+  const savedUser = user || (() => {
+    try {
+      const s = localStorage.getItem("passgo_user");
+      return s ? JSON.parse(s) : null;
+    } catch (e) { return null; }
+  })();
 
-  if (roles && !roles.includes(role)) return <Navigate to="/dashboard" replace />;
+  const savedRole = role || localStorage.getItem("role") || savedUser?.role;
+
+  if (loading && !savedRole) return <Spinner />;
+  if (!savedUser) return <Navigate to="/auth" replace />;
+
+  if (roles && savedRole && !roles.includes(savedRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return children;
 };
@@ -43,11 +53,20 @@ const ProtectedRoute = ({ children, roles }) => {
 const RoleRedirect = () => {
   const { user, role, loading } = useAuth();
 
-  if (loading || !role) return <Spinner />;
-  if (!user) return <Navigate to="/auth" replace />;
+  const savedUser = user || (() => {
+    try {
+      const s = localStorage.getItem("passgo_user");
+      return s ? JSON.parse(s) : null;
+    } catch (e) { return null; }
+  })();
 
-  if (role === "admin" || role === "superadmin") return <Navigate to="/admin" replace />;
-  if (role === "driver") return <Navigate to="/driver" replace />;
+  const savedRole = role || localStorage.getItem("role") || savedUser?.role;
+
+  if (loading && !savedRole) return <Spinner />;
+  if (!savedUser) return <Navigate to="/auth" replace />;
+
+  if (savedRole === "admin" || savedRole === "superadmin") return <Navigate to="/admin" replace />;
+  if (savedRole === "driver") return <Navigate to="/driver" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 

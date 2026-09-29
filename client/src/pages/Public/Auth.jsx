@@ -39,8 +39,15 @@ export default function Auth() {
                 });
 
                 if (response.data.user) {
-                    await checkAuth();
-                    navigate("/redirect", { replace: true });
+                    await checkAuth(response.data.user);
+                    const userRole = response.data.user.role;
+                    if (userRole === "admin" || userRole === "superadmin") {
+                        navigate("/admin", { replace: true });
+                    } else if (userRole === "driver") {
+                        navigate("/driver", { replace: true });
+                    } else {
+                        navigate("/dashboard", { replace: true });
+                    }
                 }
             } else {
                 const response = await api.post('/auth/register', {
@@ -52,8 +59,8 @@ export default function Auth() {
                 });
 
                 if (response.data.user) {
-                    await checkAuth();
-                    navigate('/dashboard');
+                    await checkAuth(response.data.user);
+                    navigate('/dashboard', { replace: true });
                 }
             }
 
