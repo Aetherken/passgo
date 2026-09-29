@@ -104,16 +104,16 @@ const getTransporter = () => {
 };
 
 export const sendEmail = async ({ to, bcc, subject, html }) => {
-    // Try Resend HTTPS API first
-    if (process.env.RESEND_API_KEY) {
-        const resendRes = await sendViaResend({ to, subject, html });
-        if (resendRes && resendRes.success) return true;
-    }
-
-    // Try Brevo HTTPS API second
+    // Try Brevo HTTPS API first (Allows sending to ANY email address worldwide for free)
     if (process.env.BREVO_API_KEY) {
         const brevoRes = await sendViaBrevo({ to, subject, html });
         if (brevoRes && brevoRes.success) return true;
+    }
+
+    // Try Resend HTTPS API second
+    if (process.env.RESEND_API_KEY) {
+        const resendRes = await sendViaResend({ to, subject, html });
+        if (resendRes && resendRes.success) return true;
     }
 
     // Fallback to Nodemailer SMTP
